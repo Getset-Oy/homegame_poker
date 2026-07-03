@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import type { Socket } from 'socket.io-client';
-import { C2S, C2S_TABLE, C2S_LOBBY, S2C_TABLE, resolvePreAction, CHIP_TRICK_MIN_STACK } from '@poker/shared';
+import { C2S, C2S_TABLE, C2S_LOBBY, S2C_TABLE, resolvePreAction, CHIP_TRICK_MIN_STACK, LIVE_STAKE_LEVEL, LIVE_VIRTUAL_STACK } from '@poker/shared';
 import type { PreActionType } from '@poker/shared';
 import { useGameStore } from '../../hooks/useGameStore.js';
 import { useTableAnimations } from '../../hooks/useTableAnimations.js';
@@ -54,9 +54,10 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
 
   const activeTableId = currentTableId || watchingTableId;
   const table = tables.find(t => t.tableId === activeTableId);
+  const liveMode = !!gameState?.config.liveMode || table?.stakeLevel.id === LIVE_STAKE_LEVEL.id;
   const tableMaxBuyIn = table?.stakeLevel.maxBuyIn ?? 200;
   const maxBuyIn = Math.min(tableMaxBuyIn, accountBalance);
-  const canBuyIn = accountBalance > 0;
+  const canBuyIn = liveMode || accountBalance > 0;
   const isAlreadySeated = !!(persistentPlayerId && gameState?.players.some(p => p.id === persistentPlayerId));
   const t = useT();
   const { gradients, assets } = useTheme();
@@ -96,7 +97,7 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
     timerData, collectingBets, potGrow,
     betChipAnimations, dealCardAnimations,
     equities, dramaticRiver, badBeat, chipTrick, shuffling,
-    allInSpotlight, winnerBanners, celebration, dealPendingSeats,
+    allInSpotlight, winnerBanners, celebration, dealPendingSeats, lastActions,
   } = useTableAnimations({
     socket: tableSocketRef.current,
     setGameState,
@@ -165,6 +166,8 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
   const sitOutNextHand = privateState?.sitOutNextHand ?? false;
   const autoMuck = privateState?.autoMuck ?? false;
   const isHandActive = lobbyState?.phase === 'hand_in_progress';
+  // Live mode player phone: only own cards + actions — no table, no chat, no amounts
+  const isLivePlayer = liveMode && !isWatching;
   const showActions = privateState?.isMyTurn && isHandActive && (privateState?.availableActions.length ?? 0) > 0 && !actionSentForTurn;
   const showPreActions = !privateState?.isMyTurn && isHandActive && !isFolded && !isSittingOut && !isBusted && !isAllIn && (privateState?.holeCards.length ?? 0) > 0;
 
@@ -174,8 +177,24 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
     }
   }, [socket, privateState?.stack]);
 
+  // Live mode: no buy-in dialog — physical chips are on the table already
+  const joinLiveTable = useCallback((seatIndex: number | null) => {
+    if (!activeTableId) return;
+    socket.emit(C2S_LOBBY.JOIN_TABLE, {
+      tableId: activeTableId,
+      name: playerName,
+      buyIn: LIVE_VIRTUAL_STACK,
+      avatarId: playerAvatar,
+      ...(seatIndex !== null ? { seatIndex } : {}),
+    });
+  }, [activeTableId, socket, playerName, playerAvatar]);
+
   const handleSeatClick = useCallback((seatIndex: number) => {
     if (isWatching && !isAlreadySeated) {
+      if (liveMode) {
+        joinLiveTable(seatIndex);
+        return;
+      }
       setSelectedSeat(seatIndex);
       setBuyInAmount(maxBuyIn);
       buyInOpenedAt.current = Date.now();
@@ -183,14 +202,18 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
     } else if (isSittingOut || isBusted) {
       socket.emit(C2S.CHANGE_SEAT, { seatIndex });
     }
-  }, [isWatching, isAlreadySeated, maxBuyIn, isSittingOut, isBusted, socket]);
+  }, [isWatching, isAlreadySeated, liveMode, joinLiveTable, maxBuyIn, isSittingOut, isBusted, socket]);
 
   const handleSitDown = useCallback(() => {
+    if (liveMode) {
+      joinLiveTable(null);
+      return;
+    }
     setBuyInAmount(maxBuyIn);
     setSelectedSeat(null);
     buyInOpenedAt.current = Date.now();
     setShowBuyIn(true);
-  }, [maxBuyIn]);
+  }, [liveMode, joinLiveTable, maxBuyIn]);
 
   const handleConfirmSitDown = useCallback(() => {
     if (!activeTableId || buyInAmount <= 0) return;
@@ -270,7 +293,81 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
           </div>
         )}
 
-        {gameState ? (
+        {isLivePlayer ? (
+          /* Live mode hero: just the player's own cards, big and clear */
+          <div className="flex flex-col items-center justify-center gap-5 w-full px-6 py-6">
+            <div
+              style={{
+                padding: '3px 14px',
+                borderRadius: 999,
+                border: '1px solid rgba(234,179,8,0.45)',
+                color: 'var(--ftp-gold)',
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: 3,
+              }}
+            >
+              {t('live_badge')}
+            </div>
+
+            {privateState && privateState.holeCards.length > 0 ? (
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="flex"
+                  style={{
+                    gap: privateState.holeCards.length > 2 ? 6 : 14,
+                    opacity: isFolded ? 0.25 : 1,
+                    filter: isFolded ? 'grayscale(0.8)' : undefined,
+                    transition: 'opacity 0.4s ease, filter 0.4s ease',
+                  }}
+                >
+                  {privateState.holeCards.map((card, i) => (
+                    <div key={`${card}-${i}`} className="animate-card-flip" style={{ animationDelay: `${i * 150}ms` }}>
+                      <CardComponent card={card} size={privateState.holeCards.length > 2 ? 'lg' : 'xl'} />
+                    </div>
+                  ))}
+                </div>
+                {isFolded && (
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2 }}>
+                    {t('game_folded')}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 15, padding: '40px 0' }}>
+                {t('game_waiting_cards')}
+              </div>
+            )}
+
+            {isHandActive && !isFolded && (privateState?.holeCards.length ?? 0) > 0 && (
+              isAllIn ? (
+                <div className="font-bold animate-allin-pulse" style={{ color: '#EAB308', fontSize: 18, letterSpacing: 2 }}>
+                  ALL IN
+                </div>
+              ) : privateState?.isMyTurn && !actionSentForTurn ? (
+                <div
+                  className="animate-live-turn-pulse"
+                  style={{
+                    padding: '8px 24px',
+                    borderRadius: 999,
+                    background: 'linear-gradient(180deg, var(--ftp-gold), #B45309)',
+                    color: '#1A1A1A',
+                    fontWeight: 800,
+                    fontSize: 15,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                  }}
+                >
+                  {t('live_your_turn')}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--ftp-text-muted)', fontSize: 13 }}>
+                  {t('game_waiting_turn')}
+                </div>
+              )
+            )}
+          </div>
+        ) : gameState ? (
           <div
             ref={tableContainerRef}
             style={{
@@ -311,6 +408,7 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
               winnerBanners={winnerBanners}
               celebration={celebration}
               dealPendingSeats={dealPendingSeats}
+              lastActions={lastActions}
             />
           </div>
         ) : (
@@ -367,7 +465,8 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
           </>
         ) : (
           <>
-            {/* Cards + stack row */}
+            {/* Cards + stack row (live mode shows cards in the hero area instead) */}
+            {!isLivePlayer && (
             <div className="flex items-center justify-center gap-4">
               {privateState && privateState.holeCards.length > 0 && (!isFolded || showFoldedCards) ? (
                 <>
@@ -412,6 +511,7 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
                 </div>
               )}
             </div>
+            )}
 
             {/* Actions */}
             <div className="mt-1">
@@ -458,6 +558,7 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
                   bigBlind={config?.bigBlind ?? 2}
                   maxBuyIn={config?.maxBuyIn ?? 200}
                   gameType={config?.gameType ?? 'NLHE'}
+                  liveMode={liveMode}
                   onActionSent={() => setActionSentForTurn(true)}
                 />
               ) : showPreActions ? (
@@ -581,9 +682,13 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
               </div>
             )}
 
-            {/* Chat */}
-            <ChatWindow messages={chatMessages} minimized={chatMinimized} onToggleMinimize={() => setChatMinimized(m => !m)} />
-            <ChatInput socket={socket} />
+            {/* Chat (hidden in live mode — everyone is at the same physical table) */}
+            {!isLivePlayer && (
+              <>
+                <ChatWindow messages={chatMessages} minimized={chatMinimized} onToggleMinimize={() => setChatMinimized(m => !m)} />
+                <ChatInput socket={socket} />
+              </>
+            )}
           </>
         )}
       </div>

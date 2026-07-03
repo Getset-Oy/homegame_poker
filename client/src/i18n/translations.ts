@@ -25,6 +25,8 @@ const en = {
   table_lobby_col_table: 'Table',
   table_lobby_col_stakes: 'Stakes',
   table_lobby_col_players: 'Plrs',
+  table_lobby_live_title: 'Live Table',
+  table_lobby_live_desc: 'Physical chips — phones show only your cards',
 
   // Lobby (waiting room)
   lobby_title: 'Lobby',
@@ -66,6 +68,14 @@ const en = {
   action_half_pot: '1/2 Pot',
   action_pot: 'Pot',
   action_all_in_preset: 'All-in',
+  action_bet_all_in: 'BET ALL-IN',
+  action_raise_all_in: 'RAISE ALL-IN',
+  action_call_all_in: 'CALL ALL-IN',
+
+  // Live mode
+  live_badge: 'LIVE',
+  live_your_turn: 'Your turn',
+  live_sit_here: 'Sit at this table',
 
   // Pre-action buttons
   preaction_check_fold: 'Check / Fold',
@@ -212,6 +222,8 @@ export const translations: Record<Language, Translations> = {
     table_lobby_col_table: 'Poyta',
     table_lobby_col_stakes: 'Panokset',
     table_lobby_col_players: 'Pelj',
+    table_lobby_live_title: 'Live-pöytä',
+    table_lobby_live_desc: 'Oikeat pelimerkit — puhelin näyttää vain omat korttisi',
 
     // Lobby (waiting room)
     lobby_title: 'Aula',
@@ -253,6 +265,14 @@ export const translations: Record<Language, Translations> = {
     action_half_pot: '1/2 Pot',
     action_pot: 'Pot',
     action_all_in_preset: 'All-in',
+    action_bet_all_in: 'BET ALL-IN',
+    action_raise_all_in: 'RAISE ALL-IN',
+    action_call_all_in: 'CALL ALL-IN',
+
+    // Live mode
+    live_badge: 'LIVE',
+    live_your_turn: 'Sinun vuorosi',
+    live_sit_here: 'Istu pöytään',
 
     // Pre-action buttons
     preaction_check_fold: 'Check / Fold',

@@ -1,6 +1,6 @@
 {
   "name": "poker-softa",
-  "version": "1.27.2",
+  "version": "1.28.0",
   "private": true,
   "workspaces": [
     "shared",
@@ -24,7 +24,7 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "concurrently": "^9.1.0",
-    "jsdom": "^28.1.0",
+    "jsdom": "26",
     "typescript": "^5.7.0",
     "vitest": "^3.2.4"
   }

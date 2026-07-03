@@ -28,6 +28,11 @@ export const DELAY_BETWEEN_POT_AWARDS_MS = 2000; // Pause between sequential sid
 // Disconnect timeout: remove player from table after this duration
 export const DISCONNECT_TIMEOUT_MS = 30_000;
 
+// Live mode: virtual stack given to every player at the start of each hand.
+// Amounts never matter in live mode — this just keeps the engine's chip math
+// far away from accidental all-ins.
+export const LIVE_VIRTUAL_STACK = 1_000_000;
+
 // Chip trick animation
 export const CHIP_TRICK_COOLDOWN_MS = 3000;
 export const CHIP_TRICK_MIN_STACK = 100;

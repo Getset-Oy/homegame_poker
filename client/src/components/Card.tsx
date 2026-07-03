@@ -4,7 +4,7 @@ import { useTheme } from '../themes/useTheme.js';
 
 interface CardComponentProps {
   card: CardString;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   isWinner?: boolean;
   isDimmed?: boolean;
 }
@@ -13,6 +13,7 @@ const SIZE_STYLES = {
   sm: { width: 36, height: 52, fontSize: 12, suitSize: 10, centerSuit: 20 },
   md: { width: 50, height: 72, fontSize: 14, suitSize: 12, centerSuit: 24 },
   lg: { width: 68, height: 96, fontSize: 18, suitSize: 16, centerSuit: 32 },
+  xl: { width: 116, height: 164, fontSize: 32, suitSize: 26, centerSuit: 56 },
 };
 
 export function CardComponent({ card, size = 'md', isWinner, isDimmed }: CardComponentProps) {

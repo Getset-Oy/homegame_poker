@@ -79,6 +79,7 @@ poker_softa/
 | Chips visual | - | components/ChipStack.tsx, views/table/BetChip.tsx, PotDisplay.tsx | chipUtils.ts | Views/Components/ChipStackView.swift |
 | Chat | - | components/ChatWindow.tsx, ChatInput.tsx | types/chat.ts | Views/Chat/ChatView.swift |
 | Run it twice | game/GameManager.ts, HandEngine.ts | views/player/RunItTwicePrompt.tsx | - | - |
+| Live mode (physical chips) | game/GameManager.ts, HandEngine.ts (declareAllIn), socket/player-namespace.ts (balance skip) | views/player/GameScreen.tsx (live hero), ActionButtons.tsx (live layout), views/table/PokerTable.tsx (badges), PlayerSeat.tsx (card pulse) | types/lobby.ts (LIVE_STAKE_LEVEL), types/game.ts (GameConfig.liveMode), constants.ts (LIVE_VIRTUAL_STACK) | - |
 | WebXR/VR | - | views/xr/XRGameScreen.tsx, XRScene.tsx, scene/*.tsx, useXRDetection.ts | - | - |
 | UI editor | app.ts (REST endpoints) | views/editor/*.tsx, /editor route | animationConfig.ts | - |
 

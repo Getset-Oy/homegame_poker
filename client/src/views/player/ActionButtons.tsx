@@ -17,12 +17,14 @@ interface ActionButtonsProps {
   bigBlind: number;
   maxBuyIn: number;
   gameType: GameType;
+  /** Live mode: physical chips — no amounts, plus declared all-in buttons */
+  liveMode?: boolean;
   onActionSent?: () => void;
 }
 
 export function ActionButtons({
   socket, availableActions, callAmount, minRaise, maxRaise, stack, currentBet,
-  potTotal, bigBlind, maxBuyIn, gameType, onActionSent,
+  potTotal, bigBlind, maxBuyIn, gameType, liveMode, onActionSent,
 }: ActionButtonsProps) {
   const [raiseAmount, setRaiseAmount] = useState(minRaise);
   const [inputValue, setInputValue] = useState('');
@@ -39,9 +41,9 @@ export function ActionButtons({
     return Math.min(Math.max(Math.round(v), minRaise), maxRaise);
   }, [minRaise, maxRaise]);
 
-  const sendAction = (action: ActionType, amount?: number) => {
+  const sendAction = (action: ActionType, amount?: number, declareAllIn?: boolean) => {
     onActionSent?.();
-    socket.emit(C2S.ACTION, { action, amount });
+    socket.emit(C2S.ACTION, { action, amount, declareAllIn });
   };
 
   const canFold = availableActions.includes('fold');
@@ -49,6 +51,55 @@ export function ActionButtons({
   const canCall = availableActions.includes('call');
   const canBet = availableActions.includes('bet');
   const canRaise = availableActions.includes('raise');
+
+  // Live mode: no amounts, no slider — fold/check/call/bet/raise plus
+  // declared all-in variants so the runout can reveal cards when needed.
+  if (liveMode) {
+    return (
+      <div className="space-y-2 p-3 rounded-lg" style={{ background: 'rgba(0,0,0,0.4)' }}>
+        <div className="flex gap-3">
+          {canFold && (
+            <FTPButton color="fold" onClick={() => sendAction('fold')} className="flex-1">
+              {t('action_fold')}
+            </FTPButton>
+          )}
+          {canCheck && (
+            <FTPButton color="check" onClick={() => sendAction('check')} className="flex-1">
+              {t('action_check')}
+            </FTPButton>
+          )}
+          {canCall && (
+            <FTPButton color="call" onClick={() => sendAction('call')} className="flex-1">
+              {t('action_call')}
+            </FTPButton>
+          )}
+          {(canBet || canRaise) && (
+            <FTPButton
+              color="raise"
+              onClick={() => sendAction(canBet ? 'bet' : 'raise')}
+              className="flex-1"
+            >
+              {canBet ? t('action_bet') : t('action_raise')}
+            </FTPButton>
+          )}
+        </div>
+        {(canBet || canRaise || canCall) && (
+          <div className="flex gap-3">
+            {canCall && (
+              <AllInButton onClick={() => sendAction('call', undefined, true)}>
+                {t('action_call_all_in')}
+              </AllInButton>
+            )}
+            {(canBet || canRaise) && (
+              <AllInButton onClick={() => sendAction(canBet ? 'bet' : 'raise', undefined, true)}>
+                {canBet ? t('action_bet_all_in') : t('action_raise_all_in')}
+              </AllInButton>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Calculate pot-based presets (proper pot-sized raise = call + pot after call)
   const halfPot = calcHalfPotBet(potTotal, callAmount, currentBet, minRaise, maxRaise);
@@ -266,6 +317,47 @@ function FTPButton({
         const btn = e.currentTarget;
         btn.style.transform = 'translateY(2px)';
         btn.style.boxShadow = `0 2px 0 ${s.shadow}, 0 3px 6px rgba(0,0,0,0.3)`;
+      }}
+      onPointerUp={(e) => {
+        const btn = e.currentTarget;
+        btn.style.transform = '';
+        btn.style.boxShadow = '';
+      }}
+      onPointerLeave={(e) => {
+        const btn = e.currentTarget;
+        btn.style.transform = '';
+        btn.style.boxShadow = '';
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Live mode declared all-in button — gold, dramatic, hard to press by accident
+function AllInButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1"
+      style={{
+        padding: '12px 20px',
+        borderRadius: 8,
+        fontWeight: 800,
+        fontSize: 14,
+        color: '#1A1A1A',
+        border: '1px solid rgba(255,255,255,0.25)',
+        cursor: 'pointer',
+        background: 'linear-gradient(180deg, var(--ftp-gold), #B45309)',
+        boxShadow: '0 4px 0 #78350F, 0 6px 12px rgba(0,0,0,0.3)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        transition: 'transform 0.1s ease, box-shadow 0.15s ease',
+      }}
+      onPointerDown={(e) => {
+        const btn = e.currentTarget;
+        btn.style.transform = 'translateY(2px)';
+        btn.style.boxShadow = '0 2px 0 #78350F, 0 3px 6px rgba(0,0,0,0.3)';
       }}
       onPointerUp={(e) => {
         const btn = e.currentTarget;

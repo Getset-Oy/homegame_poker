@@ -52,7 +52,15 @@ export interface BalanceTransaction {
   createdAt: string;
 }
 
+// Live mode plays with physical chips — blinds/buy-in here are virtual
+// bookkeeping values only, never shown to players.
+export const LIVE_STAKE_LEVEL: StakeLevel = {
+  id: 'live', gameType: 'NLHE', smallBlind: 1, bigBlind: 2,
+  maxBuyIn: 1_000_000, label: 'LIVE',
+};
+
 export function getStakeLevelById(id: string): StakeLevel | undefined {
+  if (id === LIVE_STAKE_LEVEL.id) return LIVE_STAKE_LEVEL;
   return STAKE_LEVELS.find(s => s.id === id);
 }
 
@@ -65,5 +73,6 @@ export function stakeLevelToGameConfig(stakeLevel: StakeLevel) {
     actionTimeSeconds: DEFAULT_ACTION_TIME_SECONDS,
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
+    ...(stakeLevel.id === LIVE_STAKE_LEVEL.id ? { liveMode: true } : {}),
   };
 }

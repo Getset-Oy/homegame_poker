@@ -14,6 +14,7 @@ import {
   DELAY_AFTER_ALLIN_SHOWDOWN_MS, DELAY_ALLIN_RUNOUT_STREET_MS, DELAY_DRAMATIC_RIVER_MS,
   DELAY_BAD_BEAT_TO_RESULT_MS, DELAY_BETWEEN_POT_AWARDS_MS, DELAY_SHOWDOWN_REVEAL_INTERVAL_MS,
   CHIP_TRICK_COOLDOWN_MS, CHIP_TRICK_MIN_STACK, CHIP_TRICK_DURATION_MS, CHIP_TRICK_TYPES,
+  LIVE_VIRTUAL_STACK,
 } from '@poker/shared';
 import { HandEngine } from './HandEngine.js';
 import type { HandEngineEvent, HandResult, ShowdownEntry } from './HandEngine.js';
@@ -117,6 +118,7 @@ export class GameManager {
   }
 
   addPlayer(socket: Socket, name: string, buyIn: number, avatarId?: string, preferredSeat?: number, persistentId?: string): { playerId?: string; playerToken?: string; error?: string } {
+    if (this.config.liveMode) buyIn = LIVE_VIRTUAL_STACK;
     if (buyIn > this.config.maxBuyIn) return { error: `Maximum buy-in is ${this.config.maxBuyIn}` };
     if (buyIn <= 0) return { error: 'Buy-in must be positive' };
     if (!name.trim()) return { error: 'Name is required' };
@@ -219,6 +221,11 @@ export class GameManager {
     if (this.handCompleteWatchdog) { clearTimeout(this.handCompleteWatchdog); this.handCompleteWatchdog = null; }
 
     this.broadcastLobbyState();
+    // Live mode: chips are physical — reset every stack to the virtual value
+    // so previous-hand results never affect who can play or bet.
+    if (this.config.liveMode) {
+      for (const p of this.players.values()) p.stack = LIVE_VIRTUAL_STACK;
+    }
     const eligiblePlayers = [...this.players.values()]
       .filter(p => p.isReady && p.isConnected && p.stack > 0)
       .sort((a, b) => a.seatIndex - b.seatIndex);
@@ -364,12 +371,15 @@ export class GameManager {
           if (socketId) { const socket = this.socketMap.get(socketId); socket?.emit(S2C_PLAYER.YOUR_TURN, { availableActions: event.availableActions, callAmount: event.callAmount, minRaise: event.minRaise, maxRaise: event.maxRaise, timeLimit: this.config.actionTimeSeconds }); }
         }
         this.emitSoundToPlayer(event.playerId, 'your_turn');
-        this.actionTimer.start(this.config.actionTimeSeconds,
-          () => this.handleTimeout(event.playerId, event.availableActions),
-          (remaining) => {
-            this.emitToTableRoom(S2C_TABLE.PLAYER_TIMER, { seatIndex: event.seatIndex, secondsRemaining: remaining });
-            if (remaining === 5) this.emitSound('timer_warning');
-          });
+        // Live mode: no clock — people act at their own pace at a real table
+        if (!this.config.liveMode) {
+          this.actionTimer.start(this.config.actionTimeSeconds,
+            () => this.handleTimeout(event.playerId, event.availableActions),
+            (remaining) => {
+              this.emitToTableRoom(S2C_TABLE.PLAYER_TIMER, { seatIndex: event.seatIndex, secondsRemaining: remaining });
+              if (remaining === 5) this.emitSound('timer_warning');
+            });
+        }
         this.sendPrivateStateToAll();
         this.broadcastTableState();
         break;
@@ -494,6 +504,11 @@ export class GameManager {
   }
 
   private handleRitOffer(playerIds: string[]) {
+    // Live mode: pot splitting is physical — running it twice makes no sense
+    if (this.config.liveMode) {
+      this.handEngine?.setRunItTwice(false);
+      return;
+    }
     this.ritPlayerIds = playerIds;
     this.ritResponses.clear();
 
@@ -779,11 +794,11 @@ export class GameManager {
     if (this.handHistory.length > this.MAX_HISTORY) this.handHistory.shift();
   }
 
-  handlePlayerAction(socketId: string, action: string, amount?: number) {
+  handlePlayerAction(socketId: string, action: string, amount?: number, declareAllIn?: boolean) {
     if (!this.handEngine) return;
     const player = this.players.get(socketId);
     if (!player) return;
-    this.handEngine.handleAction(player.id, action as ActionType, amount);
+    this.handEngine.handleAction(player.id, action as ActionType, amount, declareAllIn);
   }
 
   sendHandHistory(socket: Socket) {

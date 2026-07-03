@@ -177,6 +177,8 @@ interface PlayerSeatProps {
   showdownActive?: boolean;
   /** Whether deal animation is still in progress for this seat */
   dealPending?: boolean;
+  /** Live mode: hide the (virtual) stack, pulse the cards of the player in turn */
+  liveMode?: boolean;
 }
 
 function useDcCountdown(disconnectedAt: number | null): string | null {
@@ -207,7 +209,7 @@ function useDcCountdown(disconnectedAt: number | null): string | null {
   return remaining;
 }
 
-export function PlayerSeat({ player, isWinner, timerSeconds, timerMax = 30, foldDirection, equity, numHoleCards = 2, cardOffset, onAvatarClick, onAvatarHoverStart, onAvatarHoverEnd, onChipTrickClick, winningCards, showdownActive, dealPending }: PlayerSeatProps) {
+export function PlayerSeat({ player, isWinner, timerSeconds, timerMax = 30, foldDirection, equity, numHoleCards = 2, cardOffset, onAvatarClick, onAvatarHoverStart, onAvatarHoverEnd, onChipTrickClick, winningCards, showdownActive, dealPending, liveMode }: PlayerSeatProps) {
   const { gradients, assets } = useTheme();
   const isActive = player.isCurrentActor;
   const isFolded = player.status === 'folded';
@@ -239,8 +241,11 @@ export function PlayerSeat({ player, isWinner, timerSeconds, timerMax = 30, fold
   const fd: FoldDir = foldDirection ?? { x: 0, y: -40 };
   const getCardFoldAnim = (i: number) => FOLD_VARIANTS[foldVariantRef.current](i, fd);
 
+  // Live mode: cards of the player in turn pulse so the table shows whose turn it is
+  const pulseCards = !!liveMode && isActive && !isFolded;
+
   const cardsElement = (
-    <div className="flex" style={{ gap: numHoleCards > 2 ? 0 : 2 }}>
+    <div className={`flex${pulseCards ? ' animate-live-card-pulse' : ''}`} style={{ gap: numHoleCards > 2 ? 0 : 2 }}>
       {player.holeCards ? (
         player.holeCards.map((card, i) => {
           const cardIsWinning = isWinner && winningCards?.includes(card);
@@ -357,19 +362,21 @@ export function PlayerSeat({ player, isWinner, timerSeconds, timerMax = 30, fold
           )}
         </div>
 
-        {/* Stack */}
-        <div
-          className="font-mono tabular-nums"
-          onClick={onChipTrickClick}
-          style={{
-            fontSize: 12,
-            color: isActive ? '#8B6914' : '#555555',
-            fontWeight: 600,
-            cursor: onChipTrickClick ? 'pointer' : 'default',
-          }}
-        >
-          {player.stack.toLocaleString()}
-        </div>
+        {/* Stack (hidden in live mode — chips are physical) */}
+        {!liveMode && (
+          <div
+            className="font-mono tabular-nums"
+            onClick={onChipTrickClick}
+            style={{
+              fontSize: 12,
+              color: isActive ? '#8B6914' : '#555555',
+              fontWeight: 600,
+              cursor: onChipTrickClick ? 'pointer' : 'default',
+            }}
+          >
+            {player.stack.toLocaleString()}
+          </div>
+        )}
 
         {/* All-in badge */}
         {isAllIn && (

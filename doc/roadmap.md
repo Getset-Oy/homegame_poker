@@ -82,6 +82,15 @@ tuki useille kielille. Default: Suomi, vaihtoehtona Englanti. Pieni lippukuvake 
 
 ### 1.5 Use caset
  - [ ] Jos pöytä on jo täynnä, mutta käyttäjä haluaa tulla katselijaksi, niin hänellä on mahdollisuus painaa nappia "JOIN WAITING LIST". Hän pääsee jonoon, ja heti kun yksi pelaaja poistuu pöydästä, ensimmäinen waiting list jonosta päätyy automaattisesti istumaan hänen paikalleen. Pelaaja poistetaan waiting list jonosta.
+
+### 1.6 Live-pelimoodi (tabletti + puhelimet, fyysiset merkit)
+- [x] Live-pöydän luonti lobbysta (LIVE-vaihtoehto Create Table -modalissa)
+- [x] Pöytälaite (tabletti/TV) näyttää community cardit + pelissä olevien pelaajien kortit selkäpuolin; vuorossa olevan kortit sykkivät
+- [x] Pelaajan puhelin näyttää vain omat kortit + fold/check/call/bet/raise-napit ilman summia
+- [x] Bet all-in / Raise all-in / Call all-in -julistusnapit → all-in-runout avoimin kortein ja equity-näytöllä
+- [x] Ei action-timeria, ei RIT:iä, ei saldo-operaatioita; potti ja panokset hoidetaan fyysisillä merkeillä
+- [x] Action-badget pöytänäkymässä (BET/RAISE/CALL/CHECK/ALL-IN) panoschippien sijaan
+- [x] Voittaja voi näyttää korttinsa puhelimen napista (show/muck)
  
 ---
 

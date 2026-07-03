@@ -13,11 +13,13 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   server: {
-    port: 5173,
+    // Overridable so test instances can run on random ports without
+    // colliding with the user's dev server (see CLAUDE.md: Local Testing)
+    port: Number(process.env.VITE_PORT) || 5173,
     host: true,
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: `http://localhost:${process.env.SERVER_PORT || 3000}`,
         ws: true,
       },
     },

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import type { Socket } from 'socket.io-client';
-import { C2S_LOBBY, STAKE_LEVELS } from '@poker/shared';
+import { C2S_LOBBY, STAKE_LEVELS, LIVE_STAKE_LEVEL } from '@poker/shared';
 import type { StakeLevel } from '@poker/shared';
 import { useGameStore } from '../../hooks/useGameStore.js';
 import { openTableWindow, useOpenTables } from '../../hooks/useTableWindows.js';
@@ -300,6 +300,41 @@ export function TableLobbyScreen({ socket }: TableLobbyScreenProps) {
               </p>
             </div>
             <div>
+              {/* Live mode — physical chips, app deals cards and tracks action */}
+              <button
+                onClick={() => handleCreateTable(LIVE_STAKE_LEVEL)}
+                className="w-full flex items-center justify-between px-4 py-3"
+                style={{
+                  background: 'linear-gradient(90deg, rgba(234,179,8,0.18), rgba(234,179,8,0.05))',
+                  border: 'none',
+                  borderLeft: '4px solid var(--ftp-gold)',
+                  color: 'var(--ftp-lobby-text)',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                <span className="flex flex-col items-start" style={{ textAlign: 'left' }}>
+                  <span className="font-semibold" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: 'var(--ftp-gold)',
+                        color: '#1A1A1A',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: 1,
+                      }}
+                    >
+                      {t('live_badge')}
+                    </span>
+                    {t('table_lobby_live_title')}
+                  </span>
+                  <span style={{ color: '#666', fontSize: 11, marginTop: 2 }}>
+                    {t('table_lobby_live_desc')}
+                  </span>
+                </span>
+              </button>
               {STAKE_LEVELS.map((level, i) => {
                 const isEven = i % 2 === 0;
                 return (

@@ -16,7 +16,7 @@ import { ChipTrickAnimation } from './ChipTrickAnimation.js';
 import { DeckShuffleAnimation } from './DeckShuffleAnimation.js';
 import { WinnerBanner } from './WinnerBanner.js';
 import { RoyalFlushCelebration } from './RoyalFlushCelebration.js';
-import type { BadBeatData, ChipTrickData, WinnerBannerData } from '../../hooks/useTableAnimations.js';
+import type { BadBeatData, ChipTrickData, WinnerBannerData, LastActionData } from '../../hooks/useTableAnimations.js';
 export {
   SEAT_POSITIONS, BET_POSITIONS, POT_CENTER, COMMUNITY_CARDS_POS,
   GAME_INFO_POS, WINNING_HAND_POS, DEALER_BTN_OFFSET, CARD_OFFSET_DISTANCE, DECK_POS,
@@ -118,6 +118,8 @@ interface PokerTableProps {
   celebration?: { type: 'royal_flush' | 'straight_flush'; seatIndex: number } | null;
   /** Seats where deal animation is still in progress (suppresses static card backs) */
   dealPendingSeats?: Set<number>;
+  /** Last action per seat — rendered as badges in live mode */
+  lastActions?: Record<number, LastActionData>;
 }
 
 // Table center in percentage coordinates
@@ -182,9 +184,13 @@ export function PokerTable({
   winnerBanners = [],
   celebration,
   dealPendingSeats,
+  lastActions,
 }: PokerTableProps) {
   const { players, communityCards, secondBoard, pots, phase, handNumber, config } = gameState;
   const numHoleCards = config.gameType === 'PLO' ? 4 : 2;
+  // Live mode: physical chips — hide all amounts (pots, bets, stacks) and
+  // show action badges + pulsing cards for the player in turn instead.
+  const liveMode = !!config.liveMode;
   const [chipAnimations, setChipAnimations] = useState<ChipAnimation[]>([]);
   const tableRef = useRef<HTMLDivElement>(null);
   const t = useT();
@@ -419,7 +425,7 @@ export function PokerTable({
             textShadow: '0 1px 3px rgba(0,0,0,0.5)',
           }}
         >
-          {config.gameType} {config.smallBlind}/{config.bigBlind}
+          {liveMode ? `${config.gameType} · LIVE` : `${config.gameType} ${config.smallBlind}/${config.bigBlind}`}
         </div>
         {handNumber > 0 && (
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>
@@ -507,7 +513,7 @@ export function PokerTable({
       })()}
 
       {/* Pots */}
-      {pots.length > 0 && (
+      {!liveMode && pots.length > 0 && (
         <div className="absolute left-1/2 -translate-x-1/2" style={{ top: `${POT_CENTER.y}%` }}>
           <PotDisplay pots={pots} bigBlind={config.bigBlind} playerNames={playerNames} potGrow={potGrow} awardingPotIndex={awardingPotIndex} />
         </div>
@@ -537,8 +543,47 @@ export function PokerTable({
         </div>
       )}
 
+      {/* Live mode: action badges instead of bet chips */}
+      {liveMode && lastActions && Object.entries(lastActions).map(([seatStr, la]) => {
+        const seatIndex = Number(seatStr);
+        if (la.action === 'fold') return null; // folding is visible from the cards flying away
+        const betPos = getDisplayBetPos(seatIndex);
+        const label = la.isAllIn ? 'ALL-IN' : la.action.toUpperCase();
+        const badgeStyle = la.isAllIn
+          ? { background: 'linear-gradient(180deg, #EAB308, #B45309)', color: '#1A1A1A' }
+          : la.action === 'check'
+            ? { background: 'rgba(22, 163, 74, 0.9)', color: '#FFFFFF' }
+            : la.action === 'call'
+              ? { background: 'rgba(37, 99, 235, 0.9)', color: '#FFFFFF' }
+              : { background: 'linear-gradient(180deg, var(--ftp-red), var(--ftp-red-dark))', color: '#FFFFFF' };
+        return (
+          <div
+            key={`action-${seatIndex}-${la.id}`}
+            className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 animate-live-action-pop"
+            style={{
+              left: `${betPos.x}%`,
+              top: `${betPos.y}%`,
+              zIndex: 20,
+            }}
+          >
+            <div
+              className="px-3 py-1 rounded-full font-bold uppercase"
+              style={{
+                fontSize: 13,
+                letterSpacing: 1,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
+                whiteSpace: 'nowrap',
+                ...badgeStyle,
+              }}
+            >
+              {label}
+            </div>
+          </div>
+        );
+      })}
+
       {/* Bet chips on the table */}
-      {!collectingBets && players
+      {!liveMode && !collectingBets && players
         .filter(p => p.currentBet > 0)
         .map(p => {
           const betPos = getDisplayBetPos(p.seatIndex);
@@ -558,7 +603,7 @@ export function PokerTable({
         })}
 
       {/* Collecting bet chips animation */}
-      {collectingBets && tableRef.current && collectingBets.map(bet => {
+      {!liveMode && collectingBets && tableRef.current && collectingBets.map(bet => {
         const betPos = getDisplayBetPos(bet.seatIndex);
         const rect = tableRef.current!.getBoundingClientRect();
         const startX = 0;
@@ -622,7 +667,7 @@ export function PokerTable({
       })}
 
       {/* Bet chip fly animations (from seat to bet position) */}
-      {betChipAnimations.map(anim => {
+      {!liveMode && betChipAnimations.map(anim => {
         const betPos = getDisplayBetPos(anim.seatIndex);
         return (
           <div
@@ -663,7 +708,7 @@ export function PokerTable({
       })}
 
       {/* Chip fly animations */}
-      {chipAnimations.map(anim => (
+      {!liveMode && chipAnimations.map(anim => (
         <div
           key={anim.id}
           className="absolute pointer-events-none"
@@ -845,6 +890,7 @@ export function PokerTable({
                   foldDirection={getFoldDirection(seatIndex)}
                   equity={equities?.[seatIndex]}
                   numHoleCards={numHoleCards}
+                  liveMode={liveMode}
                   cardOffset={getCardOffset(seatIndex)}
                   onAvatarClick={myPlayerId && player && player.id === myPlayerId ? onMyAvatarClick : undefined}
                   onAvatarHoverStart={myPlayerId && player && player.id === myPlayerId ? onMyAvatarHoverStart : undefined}

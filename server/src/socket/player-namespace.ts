@@ -207,8 +207,11 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
         return;
       }
 
+      // Live tables use physical chips — no balance is involved
+      const isLiveTable = !!gm.getConfig().liveMode;
+
       // If authenticated, check and deduct balance
-      if (authenticatedPlayerId) {
+      if (authenticatedPlayerId && !isLiveTable) {
         const balance = db.balance.get(authenticatedPlayerId);
         if (balance < data.buyIn) {
           socket.emit(S2C_PLAYER.ERROR, { message: 'Insufficient balance' });
@@ -221,7 +224,7 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
         socket.emit(S2C_PLAYER.ERROR, { message: result.error });
       } else {
         // Deduct balance on successful join
-        if (authenticatedPlayerId) {
+        if (authenticatedPlayerId && !isLiveTable) {
           db.balance.update(authenticatedPlayerId, -data.buyIn);
           db.balance.logTransaction(authenticatedPlayerId, 'buy_in', -data.buyIn, data.tableId);
           const balance = db.balance.get(authenticatedPlayerId);
@@ -229,7 +232,7 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
         }
 
         // Set up per-player callback to credit balance back when removed
-        if (authenticatedPlayerId && result.playerId) {
+        if (authenticatedPlayerId && !isLiveTable && result.playerId) {
           const pid = authenticatedPlayerId;
           const tableIdForCallback = data.tableId;
           gm.setOnPlayerRemoved(result.playerId, (removedPlayerId, remainingStack) => {
@@ -298,11 +301,11 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
       }
     });
 
-    socket.on(C2S.ACTION, (data: { action: string; amount?: number }) => {
+    socket.on(C2S.ACTION, (data: { action: string; amount?: number; declareAllIn?: boolean }) => {
       if (!currentTableId) return;
       const gm = tableManager.getTable(currentTableId);
       if (!gm) return;
-      gm.handlePlayerAction(socket.id, data.action, data.amount);
+      gm.handlePlayerAction(socket.id, data.action, data.amount, data.declareAllIn);
     });
 
     socket.on(C2S.RIT_RESPONSE, (data: { accept: boolean; alwaysNo?: boolean; alwaysYes?: boolean }) => {

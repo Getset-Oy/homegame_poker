@@ -72,6 +72,13 @@ export interface WinnerBannerData {
   isNuts: boolean;
 }
 
+/** Last action per seat — shown as a badge in live mode (no bet chips there) */
+export interface LastActionData {
+  action: string;
+  isAllIn: boolean;
+  id: number;
+}
+
 interface UseTableAnimationsResult {
   potAwards: PotAward[] | undefined;
   winnerSeats: number[];
@@ -91,6 +98,7 @@ interface UseTableAnimationsResult {
   winnerBanners: WinnerBannerData[];
   celebration: { type: 'royal_flush' | 'straight_flush'; seatIndex: number } | null;
   dealPendingSeats: Set<number>;
+  lastActions: Record<number, LastActionData>;
 }
 
 const EMPTY_SET = new Set<number>();
@@ -121,6 +129,7 @@ export function useTableAnimations({
   const [winnerBanners, setWinnerBanners] = useState<WinnerBannerData[]>([]);
   const [celebration, setCelebration] = useState<{ type: 'royal_flush' | 'straight_flush'; seatIndex: number } | null>(null);
   const [dealPendingSeats, setDealPendingSeats] = useState<Set<number>>(EMPTY_SET);
+  const [lastActions, setLastActions] = useState<Record<number, LastActionData>>({});
 
   // Helper: resolve display position for a seat index (respects rotation)
   const getSeatPos = (seatIndex: number) => {
@@ -177,6 +186,10 @@ export function useTableAnimations({
       playerName: string;
       isAllIn: boolean;
     }) => {
+      setLastActions(prev => ({
+        ...prev,
+        [data.seatIndex]: { action: data.action, isAllIn: data.isAllIn, id: animId++ },
+      }));
       if (['bet', 'call', 'raise', 'all_in'].includes(data.action) && data.amount > 0) {
         const { startX, startY } = computeBetChipStartOffset(data.seatIndex, seatRotation);
 
@@ -252,6 +265,7 @@ export function useTableAnimations({
       dealerSeatIndex: number;
       seatIndices: number[];
     }) => {
+      setLastActions({});
       // Block static card backs for all seats that will receive cards
       setDealPendingSeats(new Set(data.seatIndices));
       // Show shuffle animation first, then deal cards after it finishes
@@ -387,6 +401,14 @@ export function useTableAnimations({
       if (data.dramatic) {
         setDramaticRiver(true);
       }
+      // New street: previous street's action badges are stale
+      setLastActions(prev => {
+        const kept: Record<number, LastActionData> = {};
+        for (const [seat, la] of Object.entries(prev)) {
+          if (la.action === 'fold' || la.isAllIn) kept[Number(seat)] = la;
+        }
+        return kept;
+      });
     };
 
     const onBadBeat = (data: BadBeatData) => {
@@ -406,6 +428,7 @@ export function useTableAnimations({
       setWinnerBanners([]);
       setCelebration(null);
       setDealPendingSeats(EMPTY_SET);
+      setLastActions({});
       // Keep winner glow visible for 2s after hand result so players can see who won
       setTimeout(() => {
         setWinnerSeats([]);
@@ -467,5 +490,6 @@ export function useTableAnimations({
     winnerBanners,
     celebration,
     dealPendingSeats,
+    lastActions,
   };
 }

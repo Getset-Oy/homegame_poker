@@ -197,7 +197,12 @@ export class HandEngine {
     }
   }
 
-  handleAction(playerId: string, action: ActionType, amount?: number) {
+  /**
+   * @param declareAllIn Live mode only: the player announces their physical
+   * stack is all-in. The engine marks them all-in without draining the
+   * virtual stack, so the normal runout/showdown flow takes over.
+   */
+  handleAction(playerId: string, action: ActionType, amount?: number, declareAllIn?: boolean) {
     if (this.isComplete) return;
 
     const playerIndex = this.players.findIndex(p => p.playerId === playerId);
@@ -312,6 +317,12 @@ export class HandEngine {
         }
         break;
       }
+    }
+
+    // Live mode: player declared a physical all-in with a call/bet/raise
+    if (declareAllIn && this.config.liveMode && ['call', 'bet', 'raise'].includes(action)) {
+      player.isAllIn = true;
+      isAllIn = true;
     }
 
     player.hasActed = true;

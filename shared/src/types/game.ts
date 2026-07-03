@@ -12,6 +12,12 @@ export interface GameConfig {
   actionTimeSeconds: number;
   minPlayers: number;
   maxPlayers: number;
+  /**
+   * Live table mode: players use physical chips, the app only tracks cards
+   * and action order. Bet amounts are virtual, all-ins are declared by the
+   * player, and there is no action timer, RIT, or balance accounting.
+   */
+  liveMode?: boolean;
 }
 
 export type GamePhase =
