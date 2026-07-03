@@ -7,18 +7,25 @@
 ## Testit
 
 - [x] **Rikkinäinen testi: `dealer-action-buttons.test.ts`** — "during
-  cards_dealt, nobody has isMyTurn=true" failaa deterministisesti (myös ilman
-  uusia muutoksia). Juurisyy: testi olettaa, että `states[1]` on cards_dealt-
-  tilapäivitys, mutta `handleSitIn()` lähettää nykyään ylimääräisen
-  PRIVATE_STATE-päivityksen sitting_out-pelaajalle ennen käden alkua, jolloin
-  indeksi siirtyy. Korjaus: testi valitsee tilan semanttisesti (ensimmäinen
-  jossa holeCards on jaettu) indeksin sijaan.
+  cards_dealt, nobody has isMyTurn=true" failasi deterministisesti. Juurisyy:
+  testi indeksoi PRIVATE_STATE-emitit positiolla (`states[1]`), mutta
+  `handleSitIn()` lähettää nykyään ylimääräisen tilapäivityksen sitting_out-
+  pelaajalle ennen käden alkua, jolloin indeksi siirtyi. Korjattu mainissa
+  (v1.27.2): snapshot valitaan semanttisesti. Sama juurisyy diagnosoitiin
+  tässäkin sessiossa itsenäisesti — päällekkäinen patch pudotettu rebasessa.
 - [x] **Flaky testi: `empty-table-cleanup.test.ts`** — "removes a connected
-  player from pendingRemovals after hand completes" failaa rinnakkaisajossa,
-  menee läpi yksinään. Juurisyy: sama indeksioletusluokka / ajoitusherkkä
-  fake-timer-tyhjennys. Korjattu determinoimalla odotus.
-- [x] **E2E-testit eivät olleet ajettavissa** — Playwright-selaimia ei ollut
-  asennettu (`npx playwright install chromium`). Asennettu ja ajettu.
+  player from pendingRemovals after hand completes" failasi ~50 % ajoista.
+  Juurisyy: heads-up-diileri (= ensimmäinen toimija preflopissa) arvotaan
+  Math.randomilla, ja testi foldasi aina sock-2:lla — kun vuoro olikin
+  Alicella, fold ohitettiin eikä käsi koskaan päättynyt. Korjattu mainissa
+  (v1.27.2) pinnaamalla Math.random. Sama juurisyy löydetty tässäkin
+  sessiossa — päällekkäinen patch pudotettu rebasessa.
+- [ ] **E2E-testit eivät ole ajettavissa tällä koneella** — Playwright-
+  selaimia ei ole asennettu. `npx playwright install chromium` käynnistetty,
+  mutta lataus CDN:stä on tässä ympäristössä erittäin hidas (kesken
+  2026-07-03). Kun asennus valmistuu: `bun run build && bun run test:e2e`
+  (käyttää eristettyjä portteja 4951/4952). Huom: yksikkötestit (618 kpl)
+  ajettu kontissa — kaikki läpi.
 
 ## Dev-ympäristö (Node 26)
 
