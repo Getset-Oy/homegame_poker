@@ -229,19 +229,25 @@ describe('Dealer action buttons', () => {
     gm.checkStartGame();
 
     // Don't advance timers — only cards_dealt has been processed, not player_turn.
-    // Pick the cards_dealt state semantically (first state with hole cards) —
-    // the number of preceding states varies (initial join, sit-in confirmation).
-    const dealt1 = getPrivateStates(sock1).find(s => s.holeCards.length > 0);
-    const dealt2 = getPrivateStates(sock2).find(s => s.holeCards.length > 0);
+    // Don't index the emit stream by position: handleSitIn emits an extra
+    // PRIVATE_STATE for players who were 'sitting_out' (here only sock-2, since
+    // the first player added is auto-seated as 'waiting'). The LAST emit per
+    // socket is deterministically the cards_dealt snapshot at this point.
+    const states1 = getPrivateStates(sock1);
+    const states2 = getPrivateStates(sock2);
 
-    expect(dealt1).toBeDefined();
-    expect(dealt2).toBeDefined();
+    // At least 2: initial + cards_dealt
+    expect(states1.length).toBeGreaterThanOrEqual(2);
+    expect(states2.length).toBeGreaterThanOrEqual(2);
 
-    // At cards_dealt, nobody should have isMyTurn=true yet
-    expect(dealt1!.isMyTurn).toBe(false);
-    expect(dealt2!.isMyTurn).toBe(false);
-    expect(dealt1!.holeCards.length).toBe(2);
-    expect(dealt2!.holeCards.length).toBe(2);
+    // Nobody should have isMyTurn=true in ANY state emitted so far
+    for (const state of [...states1, ...states2]) {
+      expect(state.isMyTurn).toBe(false);
+    }
+
+    // But the cards_dealt snapshot (latest emit) should carry hole cards
+    expect(getLatestPrivateState(sock1)!.holeCards.length).toBe(2);
+    expect(getLatestPrivateState(sock2)!.holeCards.length).toBe(2);
 
     // Now advance to process player_turn — the correct actor should get isMyTurn=true
     drainEventQueue();
