@@ -1,6 +1,6 @@
 # User Bug Reports
 
-## [NEW] Bug #R4 — 2026-03-02 06:42:48
+## [DONE] Bug #R4 — 2026-03-02 06:42:48
 **Reporter:** marski2
 **Table:** af224e0f
 
@@ -8,7 +8,7 @@ much or show näkymä pitää kadota pelaajalta välittömästi kun kortit on mu
 
 ---
 
-## [NEW] Bug #R3 — 2026-03-02 06:42:02
+## [ROADMAP] Bug #R3 — 2026-03-02 06:42:02
 **Reporter:** marski2
 **Table:** af224e0f
 
@@ -16,7 +16,7 @@ jos pelaaja ei ehtinyt toimia ajoissa, niin hän menee sellaiseen "away" tilaan 
 
 ---
 
-## [NEW] Bug #R2 — 2026-03-02 06:40:29
+## [ROADMAP] Bug #R2 — 2026-03-02 06:40:29
 **Reporter:** marski2
 **Table:** af224e0f
 
@@ -24,7 +24,7 @@ showdownin jälkeen, ensimmäisen näyttövuorossa olevan pelaajan kortit täyty
 
 ---
 
-## [NEW] Bug #R1 — 2026-03-02 06:38:49
+## [DONE] Bug #R1 — 2026-03-02 06:38:49
 **Reporter:** marski2
 **Table:** af224e0f
 

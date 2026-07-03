@@ -139,6 +139,19 @@ describe('Show/muck cards', () => {
     expect(bobOfferCalls).toHaveLength(0);
   });
 
+  it('show cards offer carries the decision deadline so the client can auto-dismiss (Bug #R4)', () => {
+    const result = makeUncontestedResult();
+    const before = Date.now();
+    (gm as any).handleHandComplete(result);
+    vi.advanceTimersByTime(DELAY_POT_AWARD_MS);
+
+    const offer = sock1.emit.mock.calls.find(
+      (call: any[]) => call[0] === S2C_PLAYER.SHOW_CARDS_OFFER
+    );
+    expect(offer).toBeDefined();
+    expect(offer![1].deadline).toBeGreaterThan(before);
+  });
+
   it('when winner chooses "show", their cards should appear in the table state', () => {
     const result = makeUncontestedResult();
     (gm as any).handleHandComplete(result);

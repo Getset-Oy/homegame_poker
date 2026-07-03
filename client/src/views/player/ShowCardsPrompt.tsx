@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { Socket } from 'socket.io-client';
 import { C2S } from '@poker/shared';
 import { useT } from '../../hooks/useT.js';
@@ -5,10 +6,22 @@ import { useT } from '../../hooks/useT.js';
 interface ShowCardsPromptProps {
   socket: Socket;
   onClose: () => void;
+  /** Server-side decision deadline — the prompt dismisses itself when it passes */
+  deadline?: number;
 }
 
-export function ShowCardsPrompt({ socket, onClose }: ShowCardsPromptProps) {
+export function ShowCardsPrompt({ socket, onClose, deadline }: ShowCardsPromptProps) {
   const t = useT();
+
+  // Auto-dismiss when the server's show-cards window closes (cards are
+  // auto-mucked server-side, so a lingering prompt would be misleading)
+  useEffect(() => {
+    if (!deadline) return;
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) { onClose(); return; }
+    const timer = setTimeout(onClose, remaining);
+    return () => clearTimeout(timer);
+  }, [deadline, onClose]);
 
   const respond = (show: boolean) => {
     socket.emit(C2S.SHOW_CARDS, { show });

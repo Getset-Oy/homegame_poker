@@ -137,6 +137,10 @@ tuki useille kielille. Default: Suomi, vaihtoehtona Englanti. Pieni lippukuvake 
   - Backspace, clear, confirm-napit
   - Min/max-rajat näkyvissä, virheellinen syöttö estetään
 
+### 3.1b Away-tila (user bug #R3)
+- [ ] Timeoutannut pelaaja siirtyy away-tilaan: auto-check kun mahdollista, muuten auto-fold; käden jälkeen sit-out
+- [ ] Away-pelaajalle näkyy vain "I'm back" -nappi, joka palauttaa normaalitilaan
+
 ### 3.2 Pelaajan tilastot
 - [ ] Session stats pelaajan puhelimessa:
   - Voitto/tappio nykyisessä sessiossa
@@ -184,6 +188,7 @@ tuki useille kielille. Default: Suomi, vaihtoehtona Englanti. Pieni lippukuvake 
   - Voittavan käden nimi ilmestyy animoidusti ("Full House, Aces full of Kings!")
 - [ ] Häviäjän kortit himmenevät, voittajan kortit korostuvat
 - [ ] Run It Twice: kaksi boardia esitetään selkeästi rinnakkain animaatioineen
+- [ ] Showdown-sekvensointi (user bug #R2): ensimmäisen näyttäjän kortit heti, muut yksitellen, muckaavat animoidaan pois, näytetyt jäävät näkyviin, lopuksi kaikki kortit pois animoituna
 
 ### 4.4 Pot award -esitys
 - [ ] Chippipino liikkuu voittajalle

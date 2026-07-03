@@ -55,6 +55,7 @@ export function PlayerView() {
   const [showRit, setShowRit] = useState(false);
   const [ritDeadline, setRitDeadline] = useState(0);
   const [showShowCards, setShowShowCards] = useState(false);
+  const [showCardsDeadline, setShowCardsDeadline] = useState(0);
   const [showRebuyPrompt, setShowRebuyPrompt] = useState(false);
   const [rebuyDeadline, setRebuyDeadline] = useState(0);
   const [rebuyMaxBuyIn, setRebuyMaxBuyIn] = useState(0);
@@ -202,7 +203,8 @@ export function PlayerView() {
       setShowRit(false);
     });
 
-    socket.on(S2C_PLAYER.SHOW_CARDS_OFFER, () => {
+    socket.on(S2C_PLAYER.SHOW_CARDS_OFFER, (data: { deadline?: number }) => {
+      setShowCardsDeadline(data?.deadline ?? 0);
       setShowShowCards(true);
     });
 
@@ -333,6 +335,7 @@ export function PlayerView() {
       {showShowCards && (
         <ShowCardsPrompt
           socket={socketRef.current}
+          deadline={showCardsDeadline}
           onClose={() => setShowShowCards(false)}
         />
       )}

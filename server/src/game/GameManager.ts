@@ -738,10 +738,13 @@ export class GameManager {
 
   private offerShowCards(result: HandResult) {
     if (result.showdownResults && result.showdownResults.length > 0) return;
+    // Deadline lets the client auto-dismiss the prompt when the server-side
+    // timer expires (Bug #R4: prompt used to linger after the timeout)
+    const deadline = Date.now() + SHOW_CARDS_TIMEOUT_MS;
     for (const pot of result.pots) {
       for (const winner of pot.winners) {
         const socketId = this.playerIdToSocketId.get(winner.playerId);
-        if (socketId) { const player = this.players.get(socketId); if (player && !player.autoMuck) { const socket = this.socketMap.get(socketId); socket?.emit(S2C_PLAYER.SHOW_CARDS_OFFER, {}); this.pendingShowCards.add(winner.playerId); } }
+        if (socketId) { const player = this.players.get(socketId); if (player && !player.autoMuck) { const socket = this.socketMap.get(socketId); socket?.emit(S2C_PLAYER.SHOW_CARDS_OFFER, { deadline }); this.pendingShowCards.add(winner.playerId); } }
       }
     }
     if (this.pendingShowCards.size > 0) {

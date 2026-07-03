@@ -12,3 +12,7 @@ study_res/
 .worktrees/
 *.tmp
 ios/.build/
+
+# Playwright artifacts
+test-results/
+.playwright-mcp/

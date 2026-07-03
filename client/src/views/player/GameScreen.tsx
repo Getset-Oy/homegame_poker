@@ -513,8 +513,14 @@ export function GameScreen({ socket, onOpenHistory, onLeaveTable, onBack, speech
             </div>
             )}
 
-            {/* Actions */}
-            <div className="mt-1">
+            {/* Actions — fixed height during a hand so the layout doesn't
+                jump when buttons appear/disappear (Bug #R1) */}
+            <div
+              className="mt-1"
+              style={isHandActive && (privateState?.holeCards.length ?? 0) > 0
+                ? { minHeight: liveMode ? 128 : 196 }
+                : undefined}
+            >
               {isSittingOut && (privateState?.stack ?? 0) > 0 ? (
                 <div className="text-center py-2 space-y-2">
                   <div style={{ color: 'var(--ftp-text-muted)', fontSize: 14 }}>
