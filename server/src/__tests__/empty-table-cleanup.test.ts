@@ -277,6 +277,7 @@ describe('Empty table cleanup', () => {
 
     afterEach(() => {
       vi.useRealTimers();
+      vi.restoreAllMocks();
     });
 
     it('removes a connected player from pendingRemovals after hand completes', () => {
@@ -292,6 +293,10 @@ describe('Empty table cleanup', () => {
 
       gm.handleSitIn('sock-1');
       gm.handleSitIn('sock-2');
+      // Pin the random first-dealer pick so Bob (seat 1) is dealer/SB and acts
+      // first preflop — his fold below must not be a no-op out-of-turn action.
+      // Math.floor(0.9 * 2) = 1 -> seat 1 in GameManager.advanceDealer.
+      vi.spyOn(Math, 'random').mockReturnValue(0.9);
       gm.checkStartGame();
       vi.advanceTimersByTime(5000);
       expect(gm.getPhase()).toBe('hand_in_progress');
