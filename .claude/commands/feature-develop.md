@@ -33,7 +33,7 @@ Read the file `doc/roadmap.md` and pick the first unchecked item (`- [ ]`) that 
    - **Snappy interactions** — instant visual feedback, no perceived lag, optimistic updates where appropriate
    - **Full integration** — verify the feature works correctly with ALL existing features (hand history, showdown, RIT, rebuy, sit out, disconnect/reconnect, table view, player view, multi-table if applicable)
 
-6. **Run all tests** — Run `bun run test` and ensure:
+6. **Run all tests** — Run `bun run test:container` (vitest in a CPU-capped docker/Apple container, see `/test`) and ensure:
    - All new tests pass
    - No existing tests are broken
    - Build succeeds (`bun run build`)

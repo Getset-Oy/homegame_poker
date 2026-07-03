@@ -32,7 +32,7 @@ Use Test-Driven Development. For use-case testing:
 4. If it doesn't match, fix until it does
 
 ## Running Tests
-Always use `/test` (or `/test <filter>`) to run tests. This dispatches a Haiku subagent which runs vitest and reports results — saving cost and latency vs running tests in the main Opus session. Debugging failures is still done in the main session.
+Always use `/test` (or `/test <filter>`) to run tests. This dispatches a Haiku subagent which runs vitest **inside a CPU/memory-capped container** (docker or Apple container, via `bun run test:container` → `scripts/test-container.sh`) and reports results — saving cost and latency vs running tests in the main Opus session, and keeping host CPU free for other sessions. Debugging failures is still done in the main session. Never run the full suite uncontained on the host (`bun run test`) — vitest spawns one worker per CPU core and saturates the machine.
 
 ## Starting a New Task
 Always fetch and check out the latest `main` before starting any new task: `git fetch origin && git checkout main && git pull origin main`. This ensures you're building on the most up-to-date code and avoids unnecessary merge conflicts.

@@ -1,6 +1,6 @@
 {
   "name": "poker-softa",
-  "version": "1.27.0",
+  "version": "1.27.1",
   "private": true,
   "workspaces": [
     "shared",
@@ -17,6 +17,7 @@
     "dev": "concurrently -k \"npm -w server run dev\" \"npm -w client run dev\"",
     "start": "node server/dist/index.js",
     "test": "vitest run",
+    "test:container": "bash scripts/test-container.sh",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },

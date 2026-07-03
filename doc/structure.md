@@ -52,7 +52,10 @@ poker_softa/
       Tests/                         # Unit tests
   e2e/              # Playwright E2E tests (helpers.ts, login.spec.ts, table-lobby.spec.ts, game-flow.spec.ts)
   doc/              # Documentation, bugs, roadmap
+  docker/           # test.Dockerfile — containerized test-runner image (node + bun)
+  scripts/          # test-container.sh — run vitest in docker/Apple container, CPU-capped
   playwright.config.ts  # Playwright config (dual webServer: backend + Vite client)
+  vitest.config.ts  # Vitest config (test includes, @poker/shared alias → shared/dist)
 ```
 
 ## Feature-to-File Mapping
@@ -92,10 +95,11 @@ poker_softa/
 
 ## Tests
 
-- **Server**: `server/src/__tests__/` — 33 test files
-- **Client**: `client/src/__tests__/` — 4 test files
+- **Server**: `server/src/__tests__/` — 42 test files
+- **Client**: `client/src/__tests__/` — 16 test files
 - **iOS**: `ios/PokerSofta/Tests/` — Swift unit tests (XCTest)
 - **E2E**: `e2e/` — Playwright tests (login, table-lobby, game-flow)
-- Run unit tests: `bun run test` (vitest)
+- Run unit tests: `bun run test:container [filter]` (vitest in a CPU-capped docker/Apple container — the `/test` skill uses this; requires shared build + deps, both handled inside the container)
+- Host run (single files only, avoid full suite): `bun run test <filter>`
 - Run iOS tests: `xcodebuild test` or via Xcode
-- Run E2E tests: `bun run test:e2e` (playwright, requires `bun run build` first)
+- Run E2E tests: `bun run test:e2e` (playwright, runs on host; requires `bun run build` first)

@@ -22,7 +22,7 @@ Also check `doc/user_bugs.md` for user-submitted bug reports marked as [NEW].
 
 3. **Fix the bug** — Implement the fix in the codebase.
 
-4. **Run all tests** — Run the failing test AND the full test suite (`bun run test`) to verify:
+4. **Run all tests** — Run the failing test AND the full test suite (`bun run test:container` — runs vitest in a CPU-capped docker/Apple container, see `/test`) to verify:
    - The new test now passes
    - No existing tests are broken
 
