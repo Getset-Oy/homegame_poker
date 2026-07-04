@@ -78,9 +78,14 @@
 
 ## Parannusehdotukset (ei kiireellisiä)
 
-- [ ] **Bundle-koko**: client-buildissa useita >1 MB chunkkeja (XR-scenet,
-  mm. music_room 2.1 MB). Three.js/XR-näkymät kannattaa ladata dynaamisella
-  importilla vasta kun VR havaitaan.
+- [x] **Bundle-koko**: `XRGameScreen` importattiin staattisesti `PlayerView`ssä,
+  joten koko Three.js-ekosysteemi (`@react-three/fiber`, `/xr`, `/drei`,
+  `three`) veti pääbundleen. Korjattu: `XRGameScreen` lazy-loadataan ja käytetään
+  `Suspense`in kanssa vain kun `supportsVR` on tosi. Pääbundle `index`
+  1 614 kB → 564 kB (gzip 456 → 171 kB); Three.js on nyt omassa
+  `XRGameScreen`-chunkissaan, joka latautuu vain VR-laitteille. 3D-ympäristö-
+  assetit (`music_room`, `living_room`, `office_*`) olivat jo dynaamisesti
+  importattuja eivätkä lataudu ei-VR-pelaajille.
 - [ ] **WebXR Quest 3** (doc/bugs.md): vaatii mkcert CA:n asennuksen ja
   mkcert()-pluginin käyttöönoton vite.config.ts:ssä (HTTPS). Ympäristöasia,
   ei koodimuutosta.

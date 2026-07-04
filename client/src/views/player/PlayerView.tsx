@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { S2C_PLAYER, S2C_LOBBY, C2S_LOBBY } from '@poker/shared';
 import type { PrivatePlayerState, HandRecord, SoundType, TableInfo, StakeLevel, ChatMessage } from '@poker/shared';
@@ -21,8 +21,13 @@ import { ThemeToggle } from '../../components/ThemeToggle.js';
 import { useT } from '../../hooks/useT.js';
 import { useSpeechBubbleQueue } from '../../hooks/useSpeechBubbleQueue.js';
 import { useXRDetection } from '../xr/useXRDetection.js';
-import { XRGameScreen } from '../xr/XRGameScreen.js';
 import { saveTableSession, clearTableSession } from '../../utils/tableSession.js';
+
+// Lazy-load the VR view so the Three.js bundle only downloads on VR-capable
+// devices (Quest etc.) — phone/desktop players never fetch it.
+const XRGameScreen = lazy(() =>
+  import('../xr/XRGameScreen.js').then(m => ({ default: m.XRGameScreen })),
+);
 
 // === Auth session persistence (survives server restarts) ===
 const AUTH_SESSION_KEY = 'ftp-auth-session';
@@ -295,7 +300,9 @@ export function PlayerView() {
         return <LobbyScreen />;
       case 'game':
         return supportsVR
-          ? <XRGameScreen socket={socketRef.current} onOpenHistory={openHistory} onLeaveTable={handleLeaveTable} speechBubble={activeBubble} onSpeechBubbleDone={onBubbleDone} />
+          ? <Suspense fallback={<GameScreen socket={socketRef.current} onOpenHistory={openHistory} onLeaveTable={handleLeaveTable} onBack={handleBackToLobby} speechBubble={activeBubble} onSpeechBubbleDone={onBubbleDone} />}>
+              <XRGameScreen socket={socketRef.current} onOpenHistory={openHistory} onLeaveTable={handleLeaveTable} speechBubble={activeBubble} onSpeechBubbleDone={onBubbleDone} />
+            </Suspense>
           : <GameScreen socket={socketRef.current} onOpenHistory={openHistory} onLeaveTable={handleLeaveTable} onBack={handleBackToLobby} speechBubble={activeBubble} onSpeechBubbleDone={onBubbleDone} />;
       default:
         return <LoginScreen socket={socketRef.current} />;
