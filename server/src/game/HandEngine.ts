@@ -867,9 +867,15 @@ export class HandEngine {
 
     this.onEvent({ type: 'showdown', entries: orderedEntries });
 
-    // Check for bad beat: hand-strength detection + equity-based detection
+    // Check for bad beat: hand-strength detection + equity-based detection.
+    // Both detectors can match in one hand, but only ONE bad_beat animation event is
+    // emitted (the client keeps only the last, so a double emit would flicker). The
+    // hand-strength detector already returns the strongest losing hand, so it is always
+    // the most dramatic — prefer it, and fall back to the equity-based loser otherwise.
+    // `badBeatPlayerIds` still collects every qualifying loser for the hand result.
     const allWinnerIds = [...allWinnerPlayerIds];
     const badBeatPlayerIds: string[] = [];
+    let badBeatEvent: Extract<HandEngineEvent, { type: 'bad_beat' }> | null = null;
 
     // 1) Hand-strength: loser had two pair or better
     const showdownPlayerData = activePlayers.map(p => ({
@@ -880,7 +886,7 @@ export class HandEngine {
     const handStrengthBadBeat = isBadBeat(this.gameType, showdownPlayerData, this.communityCards, allWinnerIds);
     if (handStrengthBadBeat) {
       badBeatPlayerIds.push(handStrengthBadBeat.loserPlayerId);
-      this.onEvent({
+      badBeatEvent = {
         type: 'bad_beat',
         loserPlayerId: handStrengthBadBeat.loserPlayerId,
         loserSeatIndex: handStrengthBadBeat.loserSeatIndex,
@@ -889,7 +895,7 @@ export class HandEngine {
         winnerPlayerId: handStrengthBadBeat.winnerPlayerId,
         winnerSeatIndex: handStrengthBadBeat.winnerSeatIndex,
         winnerHandName: handStrengthBadBeat.winnerHandName,
-      });
+      };
     }
 
     // 2) Equity-based: turn equity >70% but lost in all-in runout
@@ -899,26 +905,30 @@ export class HandEngine {
           const turnEq = this.turnEquities.get(player.playerId);
           if (turnEq != null && turnEq > 70) {
             badBeatPlayerIds.push(player.playerId);
-            // Emit bad_beat event for equity-based detection too
-            const evalResult = evaluateHand(this.gameType, player.holeCards, this.communityCards);
-            const winner = activePlayers.find(p => allWinnerPlayerIds.has(p.playerId));
-            if (winner) {
-              const winnerEval = evaluateHand(this.gameType, winner.holeCards, this.communityCards);
-              this.onEvent({
-                type: 'bad_beat',
-                loserPlayerId: player.playerId,
-                loserSeatIndex: player.seatIndex,
-                loserHandName: evalResult.handName,
-                loserHandDescription: evalResult.description,
-                winnerPlayerId: winner.playerId,
-                winnerSeatIndex: winner.seatIndex,
-                winnerHandName: winnerEval.handName,
-              });
+            // Use as the animation only if no (more dramatic) hand-strength bad beat fired.
+            if (!badBeatEvent) {
+              const evalResult = evaluateHand(this.gameType, player.holeCards, this.communityCards);
+              const winner = activePlayers.find(p => allWinnerPlayerIds.has(p.playerId));
+              if (winner) {
+                const winnerEval = evaluateHand(this.gameType, winner.holeCards, this.communityCards);
+                badBeatEvent = {
+                  type: 'bad_beat',
+                  loserPlayerId: player.playerId,
+                  loserSeatIndex: player.seatIndex,
+                  loserHandName: evalResult.handName,
+                  loserHandDescription: evalResult.description,
+                  winnerPlayerId: winner.playerId,
+                  winnerSeatIndex: winner.seatIndex,
+                  winnerHandName: winnerEval.handName,
+                };
+              }
             }
           }
         }
       }
     }
+
+    if (badBeatEvent) this.onEvent(badBeatEvent);
 
     // Chip conservation assertion: total chips must equal starting total
     const totalChipsNow = this.players.reduce((sum, p) => sum + p.currentStack, 0);

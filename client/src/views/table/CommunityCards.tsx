@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { RIVER_PEEL_MS } from '@poker/shared';
 import type { CardString } from '@poker/shared';
 import { CardComponent } from '../../components/Card.js';
 import { CardBack } from '../../components/CardBack.js';
@@ -83,8 +84,7 @@ function DramaticRiverCard({ card, isWinner, isDimmed }: {
   const [phase, setPhase] = useState<'peel' | 'done'>('peel');
 
   useEffect(() => {
-    // Total animation: 2500ms
-    const timer = setTimeout(() => setPhase('done'), 2500);
+    const timer = setTimeout(() => setPhase('done'), RIVER_PEEL_MS);
     return () => clearTimeout(timer);
   }, []);
 

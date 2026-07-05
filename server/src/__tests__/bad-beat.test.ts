@@ -298,6 +298,10 @@ describe('Bad Beat Detection (equity-based)', () => {
     expect(h.result!.pots[0].winners[0].playerId).toBe('player-1');
     expect(h.result!.badBeatPlayerIds).toBeDefined();
     expect(h.result!.badBeatPlayerIds).toContain('player-0');
+    // Only ONE bad_beat animation event may fire even when both the hand-strength and
+    // equity detectors match — the client keeps only the last, so a double emit flickers.
+    const badBeatEvents = h.events.filter(e => e.type === 'bad_beat');
+    expect(badBeatEvents.length).toBe(1);
   });
 
   it('does not flag bad beat when favorite wins (loser had low equity)', () => {

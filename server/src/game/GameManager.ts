@@ -332,9 +332,16 @@ export class GameManager {
       const revealDuration = this.showdownEntryCount * DELAY_SHOWDOWN_REVEAL_INTERVAL_MS + 1000;
       return Math.max(DELAY_SHOWDOWN_TO_RESULT_MS, revealDuration);
     }
-    if (event.type === 'hand_complete' && this.lastProcessedEventType === 'bad_beat') {
+    // Bad beat: spend the reveal/absorption delay BEFORE the explosion so it lands after
+    // the cards are shown (not on top of the staggered reveal)...
+    if (event.type === 'bad_beat' && this.lastProcessedEventType === 'showdown') {
       const revealDuration = this.showdownEntryCount * DELAY_SHOWDOWN_REVEAL_INTERVAL_MS + 1000;
-      return Math.max(DELAY_SHOWDOWN_TO_RESULT_MS, revealDuration) + DELAY_BAD_BEAT_TO_RESULT_MS;
+      return Math.max(DELAY_SHOWDOWN_TO_RESULT_MS, revealDuration);
+    }
+    // ...then hand_complete (pot award) waits only for the bad-beat animation, so the
+    // winner banner appears exactly as the bad-beat overlay fades — no dead tail, no gap.
+    if (event.type === 'hand_complete' && this.lastProcessedEventType === 'bad_beat') {
+      return DELAY_BAD_BEAT_TO_RESULT_MS;
     }
     return 0;
   }

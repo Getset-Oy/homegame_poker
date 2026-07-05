@@ -74,7 +74,6 @@ const CSS_VAR_MAP: Record<keyof ThemeCSSVars, string> = {
   animChipWin: '--ftp-anim-chip-win',
   animFlopStagger: '--ftp-anim-flop-stagger',
   animWinnerGlow: '--ftp-anim-winner-glow',
-  animWinnerFlash: '--ftp-anim-winner-flash',
   animRiverPeel: '--ftp-anim-river-peel',
   animSeatJoin: '--ftp-anim-seat-join',
   animSeatLeave: '--ftp-anim-seat-leave',

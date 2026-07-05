@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { CELEBRATION_DURATION_MS } from '@poker/shared';
 
 interface RoyalFlushCelebrationProps {
   type: 'royal_flush' | 'straight_flush';
@@ -6,14 +7,21 @@ interface RoyalFlushCelebrationProps {
 
 const CONFETTI_COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96E6A1', '#FF9FF3', '#FECA57', '#FF6348'];
 
+// Bound confetti timing so every particle finishes falling before the celebration
+// unmounts (was up to 5.5s vs a 4.5s unmount → confetti was cut off mid-fall).
+const WINDOW_S = CELEBRATION_DURATION_MS / 1000;
+const MAX_DELAY_S = 1.0;
+const MIN_DURATION_S = 2.5;
+const MAX_DURATION_S = WINDOW_S - MAX_DELAY_S - 0.2; // 0.2s safety margin
+
 export function RoyalFlushCelebration({ type }: RoyalFlushCelebrationProps) {
   const particles = useMemo(() => {
     return Array.from({ length: 40 }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
       color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      delay: Math.random() * 1.5,
-      duration: 2.5 + Math.random() * 1.5,
+      delay: Math.random() * MAX_DELAY_S,
+      duration: MIN_DURATION_S + Math.random() * (MAX_DURATION_S - MIN_DURATION_S),
       rotation: 360 + Math.random() * 720,
       size: 4 + Math.random() * 6,
     }));

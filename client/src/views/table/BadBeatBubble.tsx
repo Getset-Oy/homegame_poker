@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DELAY_BAD_BEAT_TO_RESULT_MS } from '@poker/shared';
 import { useTheme } from '../../themes/useTheme.js';
 import { getBadBeatSlogan } from '../../themes/badbeat-slogans/index.js';
 
@@ -7,16 +8,19 @@ interface BadBeatBubbleProps {
   playerName: string;
 }
 
+const FADE_MS = 500; // matches the opacity transition below
+
 export function BadBeatBubble({ seatIndex, playerName }: BadBeatBubbleProps) {
   const theme = useTheme();
   const [slogan] = useState(() => getBadBeatSlogan(theme.id));
   const [opacity, setOpacity] = useState(0);
 
   useEffect(() => {
-    // Fade in
+    // Fade in, then fade out so the fade completes exactly as the overlay is unmounted
+    // (state clears at DELAY_BAD_BEAT_TO_RESULT_MS) — keeps the bubble in step with the
+    // rest of the bad-beat choreography instead of lingering after it.
     const fadeIn = setTimeout(() => setOpacity(1), 50);
-    // Fade out before removal
-    const fadeOut = setTimeout(() => setOpacity(0), 4500);
+    const fadeOut = setTimeout(() => setOpacity(0), DELAY_BAD_BEAT_TO_RESULT_MS - FADE_MS);
     return () => { clearTimeout(fadeIn); clearTimeout(fadeOut); };
   }, []);
 

@@ -33,6 +33,14 @@ export const DISCONNECT_TIMEOUT_MS = 30_000;
 // far away from accidental all-ins.
 export const LIVE_VIRTUAL_STACK = 1_000_000;
 
+// Dramatic river card peel animation duration (client).
+// Must stay in sync with the CSS token --ftp-anim-river-peel in client/src/styles/index.css.
+export const RIVER_PEEL_MS = 2500;
+
+// Royal/straight-flush celebration lifetime (client). Confetti particle timings must
+// finish within this window so the celebration never unmounts mid-fall.
+export const CELEBRATION_DURATION_MS = 4500;
+
 // Chip trick animation
 export const CHIP_TRICK_COOLDOWN_MS = 3000;
 export const CHIP_TRICK_MIN_STACK = 100;

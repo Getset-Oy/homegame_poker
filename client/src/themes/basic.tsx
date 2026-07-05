@@ -114,7 +114,6 @@ export const basicTheme: ThemeConfig = {
     animChipWin: '600ms',
     animFlopStagger: '80ms',
     animWinnerGlow: '800ms',
-    animWinnerFlash: '600ms',
     animRiverPeel: '2500ms',
     animSeatJoin: '400ms',
     animSeatLeave: '300ms',

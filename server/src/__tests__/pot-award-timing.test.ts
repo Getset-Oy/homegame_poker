@@ -274,15 +274,35 @@ describe('Pot award timing', () => {
 });
 
 describe('Bad beat delay', () => {
-  it('hand_complete after bad_beat gets dynamic showdown delay + DELAY_BAD_BEAT_TO_RESULT_MS', () => {
+  // New choreography: the reveal-absorption delay is spent BEFORE bad_beat (so the
+  // explosion lands after the cards are shown), then hand_complete waits only for the
+  // bad-beat animation itself. Total showdown→pot time is unchanged.
+  it('bad_beat after showdown waits for the card reveal/absorption duration (2 players)', () => {
     const io = createMockIo();
     const gm = new GameManager(makeConfig(), io, 'test-table');
-    // Simulate that the last processed event was bad_beat
+    (gm as any).lastProcessedEventType = 'showdown';
+    (gm as any).showdownEntryCount = 2;
+    const delay = (gm as any).getEventDelay({ type: 'bad_beat' });
+    const revealDuration = 2 * DELAY_SHOWDOWN_REVEAL_INTERVAL_MS + 1000;
+    expect(delay).toBe(Math.max(DELAY_SHOWDOWN_TO_RESULT_MS, revealDuration));
+  });
+
+  it('bad_beat after showdown scales up with more players', () => {
+    const io = createMockIo();
+    const gm = new GameManager(makeConfig(), io, 'test-table');
+    (gm as any).lastProcessedEventType = 'showdown';
+    (gm as any).showdownEntryCount = 6; // 6 * 500 + 1000 = 4000 > 3000
+    const delay = (gm as any).getEventDelay({ type: 'bad_beat' });
+    expect(delay).toBe(6 * DELAY_SHOWDOWN_REVEAL_INTERVAL_MS + 1000);
+  });
+
+  it('hand_complete after bad_beat waits only for the bad-beat animation', () => {
+    const io = createMockIo();
+    const gm = new GameManager(makeConfig(), io, 'test-table');
     (gm as any).lastProcessedEventType = 'bad_beat';
     (gm as any).showdownEntryCount = 2;
     const delay = (gm as any).getEventDelay({ type: 'hand_complete', result: {} });
-    const revealDuration = 2 * DELAY_SHOWDOWN_REVEAL_INTERVAL_MS + 1000;
-    expect(delay).toBe(Math.max(DELAY_SHOWDOWN_TO_RESULT_MS, revealDuration) + DELAY_BAD_BEAT_TO_RESULT_MS);
+    expect(delay).toBe(DELAY_BAD_BEAT_TO_RESULT_MS);
   });
 
   it('hand_complete after showdown gets dynamic delay based on entry count (2 players)', () => {
@@ -313,14 +333,19 @@ describe('Bad beat delay', () => {
     expect(delay).toBe(6 * DELAY_SHOWDOWN_REVEAL_INTERVAL_MS + 1000);
   });
 
-  it('hand_complete after bad_beat includes reveal duration plus bad beat delay', () => {
+  it('total showdown→pot time is unchanged by the new choreography (2 players)', () => {
     const io = createMockIo();
     const gm = new GameManager(makeConfig(), io, 'test-table');
-    (gm as any).lastProcessedEventType = 'bad_beat';
     (gm as any).showdownEntryCount = 2;
-    const delay = (gm as any).getEventDelay({ type: 'hand_complete', result: {} });
+    (gm as any).lastProcessedEventType = 'showdown';
+    const badBeatDelay = (gm as any).getEventDelay({ type: 'bad_beat' });
+    (gm as any).lastProcessedEventType = 'bad_beat';
+    const handCompleteDelay = (gm as any).getEventDelay({ type: 'hand_complete', result: {} });
     const revealDuration = 2 * DELAY_SHOWDOWN_REVEAL_INTERVAL_MS + 1000;
-    expect(delay).toBe(Math.max(DELAY_SHOWDOWN_TO_RESULT_MS, revealDuration) + DELAY_BAD_BEAT_TO_RESULT_MS);
+    // showdown→bad_beat + bad_beat→hand_complete === old single showdown→hand_complete + bad-beat pause
+    expect(badBeatDelay + handCompleteDelay).toBe(
+      Math.max(DELAY_SHOWDOWN_TO_RESULT_MS, revealDuration) + DELAY_BAD_BEAT_TO_RESULT_MS,
+    );
   });
 });
 

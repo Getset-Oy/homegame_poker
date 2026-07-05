@@ -101,7 +101,6 @@ export interface ThemeCSSVars {
   animChipWin: string;
   animFlopStagger: string;
   animWinnerGlow: string;
-  animWinnerFlash: string;
   animRiverPeel: string;
   animSeatJoin: string;
   animSeatLeave: string;

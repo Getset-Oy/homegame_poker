@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { S2C_TABLE, CHIP_TRICK_DURATION_MS, DELAY_SHOWDOWN_REVEAL_INTERVAL_MS } from '@poker/shared';
+import { S2C_TABLE, CHIP_TRICK_DURATION_MS, DELAY_SHOWDOWN_REVEAL_INTERVAL_MS, DELAY_BAD_BEAT_TO_RESULT_MS, CELEBRATION_DURATION_MS } from '@poker/shared';
 import { SHUFFLE_DURATION_MS } from '../views/table/DeckShuffleAnimation.js';
 import type { GameState, SoundType, CardString, ChipTrickType } from '@poker/shared';
 import { SEAT_POSITIONS, BET_POSITIONS, DECK_POS } from '../views/table/PokerTable.js';
@@ -131,6 +131,25 @@ export function useTableAnimations({
   const [dealPendingSeats, setDealPendingSeats] = useState<Set<number>>(EMPTY_SET);
   const [lastActions, setLastActions] = useState<Record<number, LastActionData>>({});
 
+  // Central timer bookkeeping. Every animation setTimeout is tracked here so it can be
+  // flushed on unmount and at the start of each new hand — otherwise a previous hand's
+  // "clear" timer fires mid-next-hand and wipes fresh state (cross-hand leak). Passing a
+  // `key` gives reset semantics: a later event replaces, rather than races, an earlier
+  // one's pending timer (e.g. sequential side-pot awards resetting the banner-clear).
+  const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const timerSeq = useRef(0);
+  const schedule = (fn: () => void, ms: number, key?: string) => {
+    const k = key ?? `anon-${timerSeq.current++}`;
+    const existing = timersRef.current.get(k);
+    if (existing) clearTimeout(existing);
+    const id = setTimeout(() => { timersRef.current.delete(k); fn(); }, ms);
+    timersRef.current.set(k, id);
+  };
+  const clearAllTimers = () => {
+    for (const id of timersRef.current.values()) clearTimeout(id);
+    timersRef.current.clear();
+  };
+
   // Helper: resolve display position for a seat index (respects rotation)
   const getSeatPos = (seatIndex: number) => {
     if (seatRotation == null) return SEAT_POSITIONS[seatIndex];
@@ -171,11 +190,11 @@ export function useTableAnimations({
 
       if (bets.length > 0) {
         setCollectingBets(bets);
-        setTimeout(() => setPotGrow(true), 400);
-        setTimeout(() => {
+        schedule(() => setPotGrow(true), 400, 'potGrowStart');
+        schedule(() => {
           setCollectingBets(null);
           setPotGrow(false);
-        }, 700);
+        }, 700, 'potCollectClear');
       }
     };
 
@@ -202,7 +221,7 @@ export function useTableAnimations({
         };
 
         setBetChipAnimations(prev => [...prev, anim]);
-        setTimeout(() => {
+        schedule(() => {
           setBetChipAnimations(prev => prev.filter(a => a.id !== anim.id));
         }, 550);
       }
@@ -235,7 +254,7 @@ export function useTableAnimations({
           const id = animId++;
           allAnimIds.push(id);
 
-          setTimeout(() => {
+          schedule(() => {
             const anim: DealCardAnimation = { id, seatIndex, startX, startY };
             setDealCardAnimations(prev => [...prev, anim]);
             // Animation stays in DOM (CSS fill-mode: both keeps it in place)
@@ -245,7 +264,7 @@ export function useTableAnimations({
 
       // For each seat, clear pending + remove its animation cards when its last card lands
       for (const [seatIndex, landTime] of seatLastLandTime) {
-        setTimeout(() => {
+        schedule(() => {
           setDealPendingSeats(prev => {
             const next = new Set(prev);
             next.delete(seatIndex);
@@ -256,7 +275,7 @@ export function useTableAnimations({
 
       // Clean up all animation card elements after the very last card has landed
       const maxLandTime = Math.max(...seatLastLandTime.values());
-      setTimeout(() => {
+      schedule(() => {
         setDealCardAnimations(prev => prev.filter(a => !allAnimIds.includes(a.id)));
       }, maxLandTime);
     };
@@ -265,15 +284,18 @@ export function useTableAnimations({
       dealerSeatIndex: number;
       seatIndices: number[];
     }) => {
+      // New hand: flush any lingering timers from the previous hand so their "clear"
+      // callbacks can't wipe this hand's state.
+      clearAllTimers();
       setLastActions({});
       // Block static card backs for all seats that will receive cards
       setDealPendingSeats(new Set(data.seatIndices));
       // Show shuffle animation first, then deal cards after it finishes
       setShuffling(true);
-      setTimeout(() => {
+      schedule(() => {
         setShuffling(false);
         startDealAnimations(data);
-      }, SHUFFLE_DURATION_MS);
+      }, SHUFFLE_DURATION_MS, 'shuffle');
     };
 
     const onPotAward = (data: {
@@ -304,20 +326,22 @@ export function useTableAnimations({
           isNuts: data.isNuts || false,
         }));
         setWinnerBanners(banners);
-        setTimeout(() => setWinnerBanners([]), 3000);
+        // Keyed: on multi-pot hands each side-pot award resets this, so the last award
+        // governs the clear instead of an earlier award's timer wiping a later banner.
+        schedule(() => setWinnerBanners([]), 3000, 'winnerBanners');
       }
 
       // Royal/Straight Flush celebration
       if (data.handRank === 'royal_flush' || data.handRank === 'straight_flush') {
         setCelebration({ type: data.handRank, seatIndex: seats[0] });
-        setTimeout(() => setCelebration(null), 4500);
+        schedule(() => setCelebration(null), CELEBRATION_DURATION_MS, 'celebration');
       }
 
-      setTimeout(() => {
+      schedule(() => {
         setPotAwards(undefined);
         setAwardingPotIndex(null);
         // Winner glow stays until onHandResult clears it
-      }, 1500);
+      }, 1500, 'potAwardsClear');
     };
 
     const onPlayerTimer = (data: { seatIndex: number; secondsRemaining: number }) => {
@@ -326,14 +350,14 @@ export function useTableAnimations({
 
     const onSecondBoardDealt = (data: { cards: CardString[] }) => {
       // Delay second board display so players can see board 1 first
-      setTimeout(() => {
+      schedule(() => {
         const current = gameStateRef.current;
         if (current) {
           const updated = { ...current, secondBoard: data.cards };
           gameStateRef.current = updated;
           setGameState(updated);
         }
-      }, 1500);
+      }, 1500, 'secondBoard');
     };
 
     const onAllinShowdown = (data: { entries: { seatIndex: number; cards: CardString[] }[] }) => {
@@ -361,7 +385,7 @@ export function useTableAnimations({
       if (alreadyRevealed) return;
 
       data.reveals.forEach((entry, i) => {
-        setTimeout(() => {
+        schedule(() => {
           const latest = gameStateRef.current;
           if (!latest) return;
 
@@ -413,12 +437,15 @@ export function useTableAnimations({
 
     const onBadBeat = (data: BadBeatData) => {
       setBadBeat(data);
-      setTimeout(() => setBadBeat(null), 5000);
+      // Clear exactly when the server awards the pot (hand_complete after bad_beat waits
+      // DELAY_BAD_BEAT_TO_RESULT_MS), so the overlay fades right as the winner appears —
+      // no dead tail, no empty gap. The bad-beat CSS animations share this duration.
+      schedule(() => setBadBeat(null), DELAY_BAD_BEAT_TO_RESULT_MS, 'badBeat');
     };
 
     const onChipTrick = (data: ChipTrickData) => {
       setChipTrick(data);
-      setTimeout(() => setChipTrick(null), CHIP_TRICK_DURATION_MS);
+      schedule(() => setChipTrick(null), CHIP_TRICK_DURATION_MS, 'chipTrick');
     };
 
     const onHandResult = () => {
@@ -430,10 +457,10 @@ export function useTableAnimations({
       setDealPendingSeats(EMPTY_SET);
       setLastActions({});
       // Keep winner glow visible for 2s after hand result so players can see who won
-      setTimeout(() => {
+      schedule(() => {
         setWinnerSeats([]);
         setWinningCards([]);
-      }, 2000);
+      }, 2000, 'winnerGlow');
     };
 
     socket.on(S2C_TABLE.GAME_STATE, onGameState);
@@ -468,6 +495,9 @@ export function useTableAnimations({
       socket.off?.(S2C_TABLE.BAD_BEAT, onBadBeat);
       socket.off?.(S2C_TABLE.CHIP_TRICK, onChipTrick);
       socket.off?.(S2C_TABLE.HAND_RESULT, onHandResult);
+      // Cancel every pending animation timer so callbacks never fire on an unmounted
+      // hook (stale setState) or bleed into a re-subscribed socket.
+      clearAllTimers();
     };
   }, [socket, enableSound, seatRotation]); // eslint-disable-line react-hooks/exhaustive-deps
 
