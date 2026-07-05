@@ -581,18 +581,23 @@ input[type="range"].ftp-volume-slider::-webkit-slider-thumb:hover {
   pointer-events: none;
 }
 
-/* Loser seat shake */
+/* Loser seat shake — jitter deltas ONLY.
+ * The seat wrapper is centered with Tailwind's `-translate-x-1/2 -translate-y-1/2`,
+ * which emits the CSS `translate` *property* (translate: -50% -50%), a separate channel
+ * from `transform`. So this keyframe must animate `transform` with the jitter offset
+ * alone — re-adding -50% here would stack on top of the `translate` property and fling
+ * the avatar a full half-size up-left instead of shaking it in place. */
 @keyframes bad-beat-shake {
-  0%, 100% { transform: translate(-50%, -50%); }
-  10% { transform: translate(calc(-50% + 4px), calc(-50% - 2px)); }
-  20% { transform: translate(calc(-50% - 6px), calc(-50% + 3px)); }
-  30% { transform: translate(calc(-50% + 5px), calc(-50% + 2px)); }
-  40% { transform: translate(calc(-50% - 3px), calc(-50% - 4px)); }
-  50% { transform: translate(calc(-50% + 2px), calc(-50% + 1px)); }
-  60% { transform: translate(calc(-50% - 4px), calc(-50% + 3px)); }
-  70% { transform: translate(calc(-50% + 3px), calc(-50% - 2px)); }
-  80% { transform: translate(calc(-50% - 1px), calc(-50% + 4px)); }
-  90% { transform: translate(calc(-50% + 2px), calc(-50% - 1px)); }
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(4px, -2px); }
+  20% { transform: translate(-6px, 3px); }
+  30% { transform: translate(5px, 2px); }
+  40% { transform: translate(-3px, -4px); }
+  50% { transform: translate(2px, 1px); }
+  60% { transform: translate(-4px, 3px); }
+  70% { transform: translate(3px, -2px); }
+  80% { transform: translate(-1px, 4px); }
+  90% { transform: translate(2px, -1px); }
 }
 
 .animate-bad-beat-shake {
