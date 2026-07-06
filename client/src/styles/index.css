@@ -414,11 +414,15 @@ input[type="range"].ftp-volume-slider::-webkit-slider-thumb:hover {
   animation: seat-leave 300ms ease-in forwards;
 }
 
-/* All-in label pop-in */
+/* All-in label pop-in. The label is centered with Tailwind's `left-1/2 -translate-x-1/2`,
+ * which emits the CSS `translate` property (a separate channel from `transform`). This
+ * keyframe must NOT re-add the -50% here — fill-mode `forwards` would hold it on top of
+ * the `translate` property and leave the label permanently shifted a full width left.
+ * Animate scale/rotate only; centering stays on the `translate` property. */
 @keyframes allin-label-appear {
-  0% { transform: translate(-50%, 0) scale(0) rotate(-10deg); opacity: 0; }
-  50% { transform: translate(-50%, 0) scale(1.15) rotate(2deg); opacity: 1; }
-  100% { transform: translate(-50%, 0) scale(1) rotate(0deg); opacity: 1; }
+  0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+  50% { transform: scale(1.15) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 .animate-allin-label {
@@ -933,11 +937,14 @@ input[type="range"].ftp-volume-slider::-webkit-slider-thumb:hover {
   50% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(234, 179, 8, 0); }
 }
 
-/* Action badge pop-in on the live table */
+/* Action badge pop-in on the live table. The badge is centered with Tailwind's
+ * `-translate-x-1/2 -translate-y-1/2` (the CSS `translate` property). This keyframe
+ * animates `transform` with scale ONLY — re-adding -50% would stack on the `translate`
+ * property and, with fill-mode `both`, hold the badge shifted a half-size up-left. */
 .animate-live-action-pop {
   animation: live-action-pop 320ms var(--ftp-ease-overshoot, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
 }
 @keyframes live-action-pop {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  0% { opacity: 0; transform: scale(0.4); }
+  100% { opacity: 1; transform: scale(1); }
 }
