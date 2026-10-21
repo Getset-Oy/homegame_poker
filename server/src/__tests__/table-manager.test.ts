@@ -163,4 +163,37 @@ describe('TableManager', () => {
     expect(config.maxBuyIn).toBe(500);
     expect(config.gameType).toBe('NLHE');
   });
+
+  it('bounds tables that have never had a player and releases expired capacity', () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    try {
+      for (let i = 0; i < 64; i++) expect(tm.createTable('nlhe-1-2').error).toBeUndefined();
+      expect(tm.createTable('nlhe-1-2').error).toContain('Table limit');
+      expect(tm.getAllTableIds()).toHaveLength(64);
+      clock.mockReturnValue(1_000 + 5 * 60_000);
+      expect(tm.createTable('nlhe-1-2').error).toBeUndefined();
+      expect(tm.getTableList()).toHaveLength(1);
+    } finally { clock.mockRestore(); }
+  });
+
+  it('expires a never-joined table on lookup', () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    try {
+      const { tableId } = tm.createTable('nlhe-1-2');
+      clock.mockReturnValue(1_000 + 5 * 60_000);
+      expect(tm.getTable(tableId!)).toBeUndefined();
+    } finally { clock.mockRestore(); }
+  });
+
+  it('keeps occupied tables after the empty creation grace period', () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    try {
+      const { tableId } = tm.createTable('nlhe-1-2');
+      tm.getTable(tableId!)!.addPlayer(createMockSocket('occupied'), 'Alice', 200);
+      clock.mockReturnValue(1_000 + 5 * 60_000);
+      expect(tm.getTableList()).toHaveLength(1);
+      expect(tm.getTable(tableId!)!.getPlayerCount()).toBe(1);
+    } finally { clock.mockRestore(); }
+  });
+
 });

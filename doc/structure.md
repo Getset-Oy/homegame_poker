@@ -124,3 +124,16 @@ packets. Socket auth cannot switch accounts while the socket is seated.
 
 `socket-auth-boundary.test.ts` checks funded-seat account ownership, pending-login
 races, cross-table socket joins and valid reconnect account restoration.
+
+### Lobby allocation bounds (GET-165)
+
+`TableManager` caps the registry at 64 tables and lazily expires empty tables
+that remain unclaimed for five minutes before creation, listing or lookup.
+Occupied tables keep their existing lifetime; last-player leave/disconnect
+cleanup remains immediate. Each player socket can create at most one table
+per second. Guest creation remains supported.
+
+Root cause: empty cleanup ran only after a seated player left, so newly-created
+never-joined tables stayed in the registry without a bound. Table-manager and
+actual socket-handler tests cover capacity rejection, expiry/recovered capacity,
+occupied-table preservation and creation throttling.

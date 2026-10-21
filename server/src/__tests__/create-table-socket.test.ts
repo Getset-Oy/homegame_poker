@@ -174,4 +174,28 @@ describe('Create Table socket handler', () => {
       expect.objectContaining({ tableId: expect.any(String) })
     );
   });
+
+  it('throttles repeated creation on one socket without broadcasting another table', async () => {
+    const { setupPlayerNamespace } = await import('../socket/player-namespace.js');
+    const socket = createMockSocket('limited-socket');
+    const nsp = { on: vi.fn((event: string, handler: Function) => {
+      if (event === 'connection') handler(socket);
+    }) } as any;
+    setupPlayerNamespace(nsp, tm);
+    const create = socket._handlers.get(C2S_LOBBY.CREATE_TABLE);
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    try {
+      create({ stakeLevelId: 'nlhe-1-2' });
+      const broadcasts = io._emitFn.mock.calls.length;
+      create({ stakeLevelId: 'nlhe-1-2' });
+      expect(tm.getTableList()).toHaveLength(1);
+      expect(io._emitFn.mock.calls).toHaveLength(broadcasts);
+      expect(socket.emit).toHaveBeenCalledWith(S2C_LOBBY.ERROR,
+        expect.objectContaining({ message: expect.stringContaining('Wait') }));
+      clock.mockReturnValue(2_000);
+      create({ stakeLevelId: 'nlhe-1-2' });
+      expect(tm.getTableList()).toHaveLength(2);
+    } finally { clock.mockRestore(); }
+  });
+
 });

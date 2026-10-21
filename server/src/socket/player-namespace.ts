@@ -22,6 +22,7 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
 
     // Track which table this socket is at (if any)
     let currentTableId: string | null = null;
+    let lastTableCreateAt: number | null = null;
 
     // Auth state per socket
     let authenticatedPlayerId: string | null = null;
@@ -207,6 +208,12 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
     });
 
     socket.on(C2S_LOBBY.CREATE_TABLE, (data: { stakeLevelId: string; name?: string }, callback?: (response: { tableId: string }) => void) => {
+      const now = Date.now();
+      if (lastTableCreateAt !== null && now - lastTableCreateAt < 1_000) {
+        socket.emit(S2C_LOBBY.ERROR, { message: 'Wait before creating another table' });
+        return;
+      }
+      lastTableCreateAt = now;
       const result = tableManager.createTable(data.stakeLevelId, data.name);
       if (result.error) {
         socket.emit(S2C_LOBBY.ERROR, { message: result.error });

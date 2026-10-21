@@ -10,7 +10,12 @@ interface TableEntry {
   stakeLevel: StakeLevel;
   name: string;
   tableId: string;
+  createdAt: number;
 }
+
+// Bound guest-created lobby allocations; unclaimed tables expire on activity.
+const MAX_TABLES = 64;
+const EMPTY_TABLE_TTL_MS = 5 * 60_000;
 
 export class TableManager {
   private tables: Map<string, TableEntry> = new Map();
@@ -25,6 +30,9 @@ export class TableManager {
     const stakeLevel = getStakeLevelById(stakeLevelId);
     if (!stakeLevel) return { error: 'Unknown stake level: ' + stakeLevelId };
 
+    this.pruneEmptyTables();
+    if (this.tables.size >= MAX_TABLES) return { error: 'Table limit reached; try again later' };
+
     const tableId = uuidv4().slice(0, 8);
     this.tableCounter++;
     const tableName = name || 'Table ' + this.tableCounter;
@@ -34,16 +42,27 @@ export class TableManager {
       this.handleTableEmpty(tableId);
     });
 
-    this.tables.set(tableId, { gameManager, stakeLevel, name: tableName, tableId });
+    this.tables.set(tableId, { gameManager, stakeLevel, name: tableName, tableId, createdAt: Date.now() });
     console.log('Table created: ' + tableName + ' (' + stakeLevel.label + ') [' + tableId + ']');
     return { tableId };
   }
 
+  private pruneEmptyTables() {
+    const now = Date.now();
+    for (const [tableId, entry] of this.tables) {
+      if (entry.gameManager.getPlayerCount() === 0 && now - entry.createdAt >= EMPTY_TABLE_TTL_MS) {
+        this.removeTable(tableId);
+      }
+    }
+  }
+
   getTable(tableId: string): GameManager | undefined {
+    this.pruneEmptyTables();
     return this.tables.get(tableId)?.gameManager;
   }
 
   getTableEntry(tableId: string): TableEntry | undefined {
+    this.pruneEmptyTables();
     return this.tables.get(tableId);
   }
 
@@ -61,6 +80,7 @@ export class TableManager {
   }
 
   getTableList(): TableInfo[] {
+    this.pruneEmptyTables();
     return [...this.tables.values()].map(entry => ({
       tableId: entry.tableId,
       name: entry.name,
@@ -79,5 +99,8 @@ export class TableManager {
   }
 
   getStakeLevels() { return STAKE_LEVELS; }
-  getAllTableIds(): string[] { return [...this.tables.keys()]; }
+  getAllTableIds(): string[] {
+    this.pruneEmptyTables();
+    return [...this.tables.keys()];
+  }
 }
