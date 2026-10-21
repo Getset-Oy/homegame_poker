@@ -19,10 +19,9 @@ describe('table window coordination', () => {
   it('announceTableOpen posts TABLE_OPENED message via BroadcastChannel', async () => {
     const mockPostMessage = vi.fn();
     const mockClose = vi.fn();
-    vi.stubGlobal('BroadcastChannel', vi.fn(() => ({
-      postMessage: mockPostMessage,
-      close: mockClose,
-    })));
+    vi.stubGlobal('BroadcastChannel', vi.fn(function () {
+      return { postMessage: mockPostMessage, close: mockClose };
+    }));
 
     const { announceTableOpen } = await import('../hooks/useTableWindows.js');
     announceTableOpen('table-1');
@@ -37,10 +36,9 @@ describe('table window coordination', () => {
   it('announceTableClose posts TABLE_CLOSED message via BroadcastChannel', async () => {
     const mockPostMessage = vi.fn();
     const mockClose = vi.fn();
-    vi.stubGlobal('BroadcastChannel', vi.fn(() => ({
-      postMessage: mockPostMessage,
-      close: mockClose,
-    })));
+    vi.stubGlobal('BroadcastChannel', vi.fn(function () {
+      return { postMessage: mockPostMessage, close: mockClose };
+    }));
 
     const { announceTableClose } = await import('../hooks/useTableWindows.js');
     announceTableClose('table-2');
