@@ -120,3 +120,22 @@ describe('Duplicate seat prevention', () => {
     expect(result2.error).toBeUndefined();
   });
 });
+
+
+describe('Untrusted numeric buy-ins', () => {
+  it('rejects non-finite and non-numeric buy-ins before a seat is created', () => {
+    for (const buyIn of [NaN, Infinity, -Infinity, '100', null]) {
+      const gm = new GameManager(makeConfig(), createMockIo(), 'numeric-test');
+      expect(gm.addPlayer(createMockSocket('attacker'), 'Alice', buyIn as number).error).toBeDefined();
+      expect(gm.getTableState().players).toHaveLength(0);
+    }
+  });
+
+  it('does not overwrite an existing socket seat with a second buy-in', () => {
+    const gm = new GameManager(makeConfig(), createMockIo(), 'numeric-test');
+    const socket = createMockSocket('same-socket');
+    expect(gm.addPlayer(socket, 'Alice', 100).error).toBeUndefined();
+    expect(gm.addPlayer(socket, 'Alice', 100).error).toBeDefined();
+    expect(gm.getTableState().players).toHaveLength(1);
+  });
+});

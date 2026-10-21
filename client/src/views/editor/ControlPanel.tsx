@@ -54,6 +54,9 @@ export function ControlPanel({
 
   const applyToServer = async () => {
     const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+    const token = window.prompt('Operator API token');
+    if (!token) return;
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
     const results: string[] = [];
 
     // Send delay overrides
@@ -69,7 +72,7 @@ export function ControlPanel({
         try {
           const res = await fetch(`${serverUrl}/api/animation-config`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(config),
           });
           results.push(res.ok ? 'delays' : 'delays:err');
@@ -83,7 +86,7 @@ export function ControlPanel({
     try {
       const res = await fetch(`${serverUrl}/api/layout-positions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           SEAT_POSITIONS,
           BET_POSITIONS,

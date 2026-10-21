@@ -1,11 +1,11 @@
-FROM node:20 AS builder
+FROM node:24.22.1 AS builder
 WORKDIR /app
 COPY . .
 RUN npm install
 RUN npx tsc -b --force shared/tsconfig.json
 RUN npx tsc -b --force server/tsconfig.json
 
-FROM node:20-slim
+FROM node:24.22.1-slim
 WORKDIR /app
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/shared/package.json shared/

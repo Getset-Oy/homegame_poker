@@ -1,3 +1,4 @@
+import { validatePayload } from './validate-payload.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -12,6 +13,8 @@ const SERVER_VERSION: string = pkg.version;
 
 export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager, db: Database) {
   nsp.on('connection', (socket) => {
+    validatePayload(socket);
+    socket.on('error', () => socket.emit(S2C_PLAYER.ERROR, { message: 'Invalid event payload' }));
     console.log(`Player socket connected: ${socket.id}`);
 
     // Start in lobby room
@@ -35,13 +38,18 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
     // === Auth events ===
 
     socket.on(C2S_LOBBY.CHECK_NAME, (data: { name: string }) => {
-      if (!data.name || typeof data.name !== 'string') return;
+      if (!data || typeof data.name !== 'string' || !data.name || data.name.length > 80) return;
       const player = db.players.findByName(data.name.trim());
       socket.emit(S2C_LOBBY.NAME_STATUS, { exists: !!player });
     });
 
     socket.on(C2S_LOBBY.REGISTER, async (data: { name: string; password: string; avatarId?: string }) => {
-      if (!data.name || !data.password) {
+      if (currentTableId) {
+        socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Leave the table before changing accounts' });
+        return;
+      }
+      if (!data || typeof data.name !== 'string' || typeof data.password !== 'string'
+        || !data.name || !data.password || data.name.length > 80 || Buffer.byteLength(data.password, 'utf8') > 72) {
         socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Name and password required' });
         return;
       }
@@ -61,6 +69,7 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
       }
       try {
         const player = await db.players.create(name, data.password, data.avatarId || '1');
+        if (currentTableId) return;
         authenticatedPlayerId = player.id;
         authenticatedPlayerName = player.name;
         const sessionToken = db.sessions.create(player.id);
@@ -77,7 +86,12 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
     });
 
     socket.on(C2S_LOBBY.LOGIN, async (data: { name: string; password: string }) => {
-      if (!data.name || !data.password) {
+      if (currentTableId) {
+        socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Leave the table before changing accounts' });
+        return;
+      }
+      if (!data || typeof data.name !== 'string' || typeof data.password !== 'string'
+        || !data.name || !data.password || data.name.length > 80 || data.password.length > 1024) {
         socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Name and password required' });
         return;
       }
@@ -91,6 +105,7 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
         socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Wrong password' });
         return;
       }
+      if (currentTableId) return;
       db.players.updateLastLogin(player.id);
       authenticatedPlayerId = player.id;
       authenticatedPlayerName = player.name;
@@ -105,7 +120,11 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
     });
 
     socket.on(C2S_LOBBY.SESSION_AUTH, (data: { sessionToken: string }) => {
-      if (!data.sessionToken || typeof data.sessionToken !== 'string') {
+      if (currentTableId) {
+        socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Leave the table before changing accounts' });
+        return;
+      }
+      if (!data || !data.sessionToken || typeof data.sessionToken !== 'string') {
         socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Session token required' });
         return;
       }
@@ -136,7 +155,7 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
         socket.emit(S2C_LOBBY.AUTH_ERROR, { message: 'Not authenticated' });
         return;
       }
-      if (!data.amount || data.amount <= 0) {
+      if (!data || typeof data.amount !== 'number' || !Number.isFinite(data.amount) || data.amount <= 0 || data.amount > Number.MAX_SAFE_INTEGER) {
         socket.emit(S2C_LOBBY.ERROR, { message: 'Invalid amount' });
         return;
       }
@@ -201,6 +220,10 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
     });
 
     socket.on(C2S_LOBBY.JOIN_TABLE, (data: { tableId: string; name: string; buyIn: number; avatarId?: string; seatIndex?: number }) => {
+      if (!data || typeof data.tableId !== 'string' || currentTableId) {
+        socket.emit(S2C_LOBBY.ERROR, { message: 'Leave the current table before joining another' });
+        return;
+      }
       const gm = tableManager.getTable(data.tableId);
       if (!gm) {
         socket.emit(S2C_LOBBY.ERROR, { message: 'Table not found' });
@@ -274,6 +297,10 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
     // === Per-table game events (only work if player is at a table) ===
 
     socket.on(C2S.RECONNECT, (data: { playerId: string; tableId?: string; playerToken?: string }) => {
+      if (currentTableId) {
+        socket.emit(S2C_PLAYER.RECONNECT_FAILED, { message: 'Leave the current table before reconnecting' });
+        return;
+      }
       // Try to find which table has this player
       const targetTableId = data.tableId;
       if (!targetTableId) {
@@ -337,7 +364,7 @@ export function setupPlayerNamespace(nsp: Namespace, tableManager: TableManager,
     });
 
     socket.on(C2S.REBUY, (data: { amount: number }) => {
-      if (!currentTableId) return;
+      if (!currentTableId || !data || typeof data.amount !== 'number' || !Number.isFinite(data.amount) || data.amount <= 0) return;
       const gm = tableManager.getTable(currentTableId);
       if (!gm) return;
 

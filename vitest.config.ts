@@ -16,9 +16,6 @@ export default defineConfig({
     // Node >=25 defines globalThis.localStorage (value: undefined without
     // --localstorage-file), which stops vitest's jsdom env from injecting its
     // own. Disable Node's webstorage so jsdom's localStorage wins.
-    poolOptions: {
-      forks: { execArgv: ['--no-experimental-webstorage'] },
-      threads: { execArgv: ['--no-experimental-webstorage'] },
-    },
+    execArgv: ['--no-experimental-webstorage'],
   },
 });

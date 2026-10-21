@@ -20,6 +20,7 @@ function createMockSocket(id: string) {
   const handlers = new Map<string, Function>();
   return {
     id,
+    use: vi.fn(),
     emit: vi.fn(),
     on: vi.fn((event: string, handler: Function) => {
       handlers.set(event, handler);

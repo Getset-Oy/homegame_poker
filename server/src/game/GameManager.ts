@@ -119,9 +119,11 @@ export class GameManager {
 
   addPlayer(socket: Socket, name: string, buyIn: number, avatarId?: string, preferredSeat?: number, persistentId?: string): { playerId?: string; playerToken?: string; error?: string } {
     if (this.config.liveMode) buyIn = LIVE_VIRTUAL_STACK;
+    if (typeof buyIn !== 'number' || !Number.isFinite(buyIn)) return { error: 'Invalid buy-in' };
+    if (this.players.has(socket.id)) return { error: 'Already seated at this table' };
     if (buyIn > this.config.maxBuyIn) return { error: `Maximum buy-in is ${this.config.maxBuyIn}` };
     if (buyIn <= 0) return { error: 'Buy-in must be positive' };
-    if (!name.trim()) return { error: 'Name is required' };
+    if (typeof name !== 'string' || !name.trim() || name.length > 80) return { error: 'Name is required' };
 
     // Prevent same player (persistent account) from sitting twice at this table
     if (persistentId) {
@@ -132,7 +134,7 @@ export class GameManager {
 
     let seatIndex = -1;
     if (preferredSeat !== undefined) {
-      if (preferredSeat < 0 || preferredSeat >= this.config.maxPlayers) return { error: 'Invalid seat number' };
+      if (!Number.isInteger(preferredSeat) || preferredSeat < 0 || preferredSeat >= this.config.maxPlayers) return { error: 'Invalid seat number' };
       if (this.seatMap.has(preferredSeat)) return { error: `Seat ${preferredSeat} is already taken` };
       seatIndex = preferredSeat;
     } else {
@@ -854,6 +856,7 @@ export class GameManager {
   rebuyPlayer(socketId: string, amount: number): { error?: string } {
     const player = this.players.get(socketId);
     if (!player) return { error: 'Player not found' };
+    if (typeof amount !== 'number' || !Number.isFinite(amount)) return { error: 'Invalid amount' };
     if (amount > this.config.maxBuyIn) return { error: `Maximum buy-in is ${this.config.maxBuyIn}` };
     if (amount <= 0) return { error: 'Amount must be positive' };
     if (player.status !== 'busted' && player.status !== 'sitting_out') return { error: 'You can only rebuy when busted or sitting out' };

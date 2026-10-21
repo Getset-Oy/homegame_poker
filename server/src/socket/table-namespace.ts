@@ -1,3 +1,4 @@
+import { validatePayload } from './validate-payload.js';
 import type { Namespace } from 'socket.io';
 import { S2C_TABLE, S2C_LOBBY, C2S_TABLE, C2S, S2C_PLAYER } from '@poker/shared';
 import type { TableManager } from '../game/TableManager.js';
@@ -5,6 +6,8 @@ import type { Database } from '../db/index.js';
 
 export function setupTableNamespace(nsp: Namespace, tableManager: TableManager, db: Database) {
   nsp.on('connection', (socket) => {
+    validatePayload(socket);
+    socket.on('error', () => socket.emit(S2C_PLAYER.ERROR, { message: 'Invalid event payload' }));
     console.log(`Table display connected: ${socket.id}`);
 
     // Start in lobby room

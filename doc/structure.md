@@ -104,3 +104,23 @@ poker_softa/
 - Host run (single files only, avoid full suite): `bun run test <filter>`
 - Run iOS tests: `xcodebuild test` or via Xcode
 - Run E2E tests: `bun run test:e2e` (playwright, runs on host; requires `bun run build` first)
+
+## Operator API security
+
+`server/src/app.ts` requires a server-side `EDITOR_API_TOKEN` bearer credential for
+configuration/layout writes and bug report listing/archival. Missing configuration
+fails closed (503); missing/wrong credentials return 401. The editor asks the
+operator for this token when applying changes; do not configure it as `VITE_*` or
+commit it. Public animation/layout reads remain available for rendering.
+
+`server/src/__tests__/operator-api.test.ts` checks HTTP authorization and
+`duplicate-seat.test.ts` covers invalid numeric buy-ins and repeated socket joins.
+The original endpoints trusted caller access to the editor URL, which is not an
+authorization boundary; authorization now runs at each sensitive HTTP endpoint.
+
+`server/src/socket/validate-payload.ts` validates required/optional network fields
+for both namespaces before handlers run; `socket-payload.test.ts` covers malformed
+packets. Socket auth cannot switch accounts while the socket is seated.
+
+`socket-auth-boundary.test.ts` checks funded-seat account ownership, pending-login
+races, cross-table socket joins and valid reconnect account restoration.
