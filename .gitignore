@@ -16,3 +16,6 @@ ios/.build/
 # Playwright artifacts
 test-results/
 .playwright-mcp/
+
+# Claude Code local permissions (may contain secrets)
+**/.claude/settings.local.json
